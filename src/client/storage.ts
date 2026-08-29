@@ -11,7 +11,6 @@ export interface StoredHousehold {
   version: 1;
   profile: HouseholdProfile;
   inbox: InboxAction[];
-  aiConsent: boolean | null;
 }
 
 const factKeySchema = z.enum([
@@ -151,7 +150,6 @@ const storageSchema = z
       })
       .strict(),
     inbox: z.array(inboxActionSchema).max(60),
-    aiConsent: z.boolean().nullable(),
   })
   .strict();
 
@@ -162,13 +160,12 @@ export function createEmptyHousehold(now = new Date().toISOString()): StoredHous
     version: 1,
     profile: {
       id: "synthetic-household",
-      displayName: "Demo household",
+      displayName: "Your household",
       preferredLanguage: "en",
       facts: {},
       updatedAt: now,
     },
     inbox: [],
-    aiConsent: null,
   };
 }
 
@@ -177,7 +174,9 @@ export function loadHousehold(storage: Pick<Storage, "getItem">): StoredHousehol
   if (!raw) return createEmptyHousehold();
 
   try {
-    const parsed = storageSchema.safeParse(JSON.parse(raw));
+    const rawValue = JSON.parse(raw) as Record<string, unknown>;
+    delete rawValue.aiConsent;
+    const parsed = storageSchema.safeParse(rawValue);
     if (!parsed.success) return createEmptyHousehold();
     return parsed.data as StoredHousehold;
   } catch {

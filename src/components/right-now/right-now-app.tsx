@@ -13,6 +13,7 @@ import {
 } from "@phosphor-icons/react";
 import { applyFactUpdate, getNextQuestions, planMission } from "@/lib/mission-engine";
 import type { CasePlan } from "@/lib/agent/schemas";
+import { isSafetyMessage } from "@/lib/agent/fallback";
 import type { FactKey, FactValue, LanguageCode, MissionId, PreparedAction } from "@/lib/types";
 import {
   clearHousehold,
@@ -24,10 +25,9 @@ import {
 } from "@/client/storage";
 import { factLabels, formatFact, HouseholdDialog } from "./household-dialog";
 import { ReviewDialog } from "./review-dialog";
-import { ConsentDialog } from "./consent-dialog";
 import { detectSensitiveInput } from "@/lib/security/input-safety";
 
-type ConversationMessage = { id: string; role: "user" | "assistant"; text: string; note?: string };
+type ConversationMessage = { id: string; role: "user" | "assistant"; text: string };
 
 type AgentResponse = {
   language: LanguageCode;
@@ -90,6 +90,12 @@ function caseActionId(householdId: string): string {
   return `${householdId}-${nonce}:general-case-simulation`;
 }
 
+function statusLabel(status: InboxAction["status"]): string {
+  if (status === "completed") return "Completed by you";
+  if (status === "submitted" || status === "simulated") return "Request prepared";
+  return "Ready to continue";
+}
+
 export function RightNowApp() {
   const [household, setHousehold] = useState<StoredHousehold>(() => createEmptyHousehold());
   const [hydrated, setHydrated] = useState(false);
@@ -98,9 +104,7 @@ export function RightNowApp() {
   const [activeMission, setActiveMission] = useState<MissionId | null>(null);
   const [preparedActions, setPreparedActions] = useState<PreparedAction[]>([]);
   const [casePlan, setCasePlan] = useState<CasePlan | null>(null);
-  const [casePlanMode, setCasePlanMode] = useState<"model" | "fallback" | null>(null);
-  const [consentOpen, setConsentOpen] = useState(false);
-  const [pendingMessage, setPendingMessage] = useState<string | null>(null);
+  const [safetyAlert, setSafetyAlert] = useState(false);
   const [householdOpen, setHouseholdOpen] = useState(false);
   const [reviewOpen, setReviewOpen] = useState(false);
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
@@ -155,17 +159,13 @@ export function RightNowApp() {
       setPreparedActions(plan.actions);
       setSelectedIds(plan.actions.map(({ id }) => id));
       const preparedText = plan.actions.length > 0
-        ? `I found ${plan.actions.length} services and prepared a simulation plan. Nothing has been sent.`
+        ? `I found ${plan.actions.length} relevant ${plan.actions.length === 1 ? "service" : "services"} and prepared your action plan. Nothing has been submitted.`
         : "I do not have enough information to prepare a plan. Try editing the saved details.";
       setMessages((current) => [...current, { id: messageId(), role: "assistant", text: preparedText }]);
     }
   }
 
-  function prepareGeneralCasePlan(
-    plan: CasePlan,
-    mode: "model" | "fallback",
-    profile = household.profile,
-  ): void {
+  function prepareGeneralCasePlan(plan: CasePlan, profile = household.profile): void {
     const action: PreparedAction = {
       id: caseActionId(profile.id),
       serviceId: "general-case-simulation",
@@ -175,9 +175,7 @@ export function RightNowApp() {
       status: "prepared",
       eligibility: {
         status: "needs_information",
-        reason: mode === "model"
-          ? "AI-generated planning brief only. RightNow has not determined official eligibility."
-          : "Generic fallback planning brief only. RightNow has not determined official eligibility.",
+        reason: "RightNow has not confirmed official eligibility for this yet. Review the details before you continue.",
         missingFacts: [],
         evidence: [],
       },
@@ -185,19 +183,19 @@ export function RightNowApp() {
       reviewItems: [],
       sources: [],
       lastVerified: new Date().toISOString().slice(0, 10),
-      disclaimer: "Independent prototype. This is a generated simulation plan, not an official process or application.",
+      disclaimer: "This plan is a preparation guide RightNow put together, not an official process or application.",
     };
     setPreparedActions([action]);
     setSelectedIds([action.id]);
   }
 
-  async function interpretMessage(message: string, aiConsent: boolean): Promise<void> {
+  async function interpretMessage(message: string): Promise<void> {
     setWorking(true);
     setError(null);
     setPreparedActions([]);
     setSelectedIds([]);
     setCasePlan(null);
-    setCasePlanMode(null);
+    setSafetyAlert(isSafetyMessage(message));
     setMessages((current) => [...current, { id: messageId(), role: "user", text: message }]);
 
     try {
@@ -207,7 +205,7 @@ export function RightNowApp() {
         body: JSON.stringify({
           message,
           locale: household.profile.preferredLanguage,
-          aiConsent,
+          aiConsent: true,
         }),
       });
       const payload = await response.json() as AgentResponse & { error?: { message?: string } };
@@ -215,27 +213,16 @@ export function RightNowApp() {
 
       setMessages((current) => [
         ...current,
-        {
-          id: messageId(),
-          role: "assistant",
-          text: payload.reply,
-          note: payload.mode === "fallback"
-            ? payload.fallbackReason === "consent-declined"
-              ? "Guided mode. No description was sent to an AI provider."
-              : "AI was unavailable, so RightNow used a safe fallback simulation."
-            : "AI-routed simulation. Review before saving any mock record.",
-        },
+        { id: messageId(), role: "assistant", text: payload.reply },
       ]);
 
       if (!payload.missionId) {
         setActiveMission(null);
         setCasePlan(payload.casePlan);
-        setCasePlanMode(payload.casePlan ? payload.mode : null);
-        if (payload.casePlan) prepareGeneralCasePlan(payload.casePlan, payload.mode);
+        if (payload.casePlan) prepareGeneralCasePlan(payload.casePlan);
         return;
       }
       setCasePlan(null);
-      setCasePlanMode(null);
       const extracted = Object.fromEntries(payload.facts.map(({ key, value }) => [key, value]));
       const nextProfile = applyFactUpdate(
         { ...household.profile, preferredLanguage: payload.language },
@@ -259,24 +246,11 @@ export function RightNowApp() {
     const sensitive = detectSensitiveInput(clean);
     if (sensitive) {
       setInput("");
-      setError(`Remove the ${sensitive.kind} value. This prototype never needs identity or account numbers.`);
+      setError(`Remove the ${sensitive.kind} value. RightNow never needs identity or account numbers.`);
       return;
     }
     setInput("");
-    if (household.aiConsent === null) {
-      setPendingMessage(clean);
-      setConsentOpen(true);
-      return;
-    }
-    void interpretMessage(clean, household.aiConsent);
-  }
-
-  function chooseAiMode(aiConsent: boolean): void {
-    setConsentOpen(false);
-    setHousehold((current) => ({ ...current, aiConsent }));
-    const message = pendingMessage;
-    setPendingMessage(null);
-    if (message) void interpretMessage(message, aiConsent);
+    void interpretMessage(clean);
   }
 
   function answerQuestion(value: FactValue, label: string): void {
@@ -306,8 +280,11 @@ export function RightNowApp() {
     }));
   }
 
-  function changeAiConsent(aiConsent: boolean | null): void {
-    setHousehold((current) => ({ ...current, aiConsent }));
+  function markCompleted(id: string): void {
+    setHousehold((current) => ({
+      ...current,
+      inbox: current.inbox.map((item) => item.id === id ? { ...item, status: "completed" } : item),
+    }));
   }
 
   function clearAll(): void {
@@ -315,9 +292,7 @@ export function RightNowApp() {
     setMessages([]);
     setPreparedActions([]);
     setCasePlan(null);
-    setCasePlanMode(null);
-    setConsentOpen(false);
-    setPendingMessage(null);
+    setSafetyAlert(false);
     setSelectedIds([]);
     setActiveMission(null);
     setHouseholdOpen(false);
@@ -348,7 +323,7 @@ export function RightNowApp() {
       });
       const result = await submitResponse.json() as { submissions?: MockSubmission[]; error?: { message?: string } };
       if (!submitResponse.ok || !result.submissions) {
-        throw new Error(result.error?.message ?? "The mock gateway could not finish.");
+        throw new Error(result.error?.message ?? "RightNow could not finish preparing this request.");
       }
 
       const byId = new Map(result.submissions.map((submission) => [submission.actionId, submission]));
@@ -364,13 +339,12 @@ export function RightNowApp() {
       setPreparedActions([]);
       setSelectedIds([]);
       setCasePlan(null);
-      setCasePlanMode(null);
       setMessages((current) => [
         ...current,
-        { id: messageId(), role: "assistant", text: "Your simulated plan is now in your civic inbox. Nothing was sent." },
+        { id: messageId(), role: "assistant", text: "Added to Your requests. Continue to the official service when you're ready." },
       ]);
     } catch (caught) {
-      setError(caught instanceof Error ? caught.message : "The mock gateway could not finish.");
+      setError(caught instanceof Error ? caught.message : "RightNow could not finish preparing this request.");
     } finally {
       setSubmitting(false);
     }
@@ -434,7 +408,7 @@ export function RightNowApp() {
         <section className="service-finder" aria-labelledby="hero-title">
           <div className="finder-heading">
             <h1 id="hero-title">Whatever changed, start here</h1>
-            <p>Describe any life situation. AI routes it into a reviewable simulation, while verified demo connectors add detail when they fit. Nothing is submitted.</p>
+            <p>Describe any life situation in your own words. RightNow finds the services that apply and helps you prepare everything you need — nothing is submitted until you choose to continue.</p>
           </div>
           <form className="composer" onSubmit={(event) => { event.preventDefault(); requestInterpretation(input); }}>
             <button
@@ -463,10 +437,7 @@ export function RightNowApp() {
           </form>
           <p className="demo-notice">
             <CheckCircleIcon aria-hidden="true" size={16} weight="fill" />
-            Do not include names, exact addresses, ID or account numbers, OTPs, or personal records.
-            <span className="ai-mode-chip">
-              {household.aiConsent === true ? "AI routing on" : household.aiConsent === false ? "Guided mode" : "AI asks first"}
-            </span>
+            Do not include names, exact addresses, ID or account numbers, OTPs, or personal records. RightNow uses automated assistance to understand your request and identify relevant services.
           </p>
         </section>
 
@@ -502,49 +473,49 @@ export function RightNowApp() {
               {messages.map((message) => (
                 <div className={`message ${message.role}`} key={message.id}>
                   {message.text}
-                  {message.note ? <small>{message.note}</small> : null}
                 </div>
               ))}
               <div ref={transcriptEnd} />
             </div>
           ) : null}
 
-          {working ? <div className="question-panel"><p>Finding services and next steps that may help...</p></div> : null}
+          {working ? <div className="question-panel"><p>Understanding your situation…</p></div> : null}
           {error ? <div className="error-callout" role="alert">{error}</div> : null}
+
+          {safetyAlert ? (
+            <section className="emergency-panel" aria-labelledby="safety-plan-title">
+              <h2 id="safety-plan-title">Your safety comes first</h2>
+              <p>
+                If you are in immediate danger or the intruder may still be nearby, move somewhere safe if
+                possible and call <a href="tel:112"><strong>112</strong></a> now.
+              </p>
+              <ol>
+                <li>Call 112 for urgent police, fire or medical help.</li>
+                <li>Once you are safe, note the time, place, people involved and any property affected.</li>
+                <li>Keep photos, messages or other evidence only if it is safe to do so.</li>
+              </ol>
+              <p className="simulation-disclaimer">RightNow does not make this call for you — use the link above to call 112 directly.</p>
+            </section>
+          ) : null}
 
           {casePlan ? (
             <section ref={casePlanTarget} className="question-panel generated-plan" aria-labelledby="case-plan-title">
-              <span className="plan-eyebrow">
-                {casePlanMode === "model" ? "AI-generated simulation" : "Safe fallback simulation"}
-              </span>
+              <span className="plan-eyebrow">Your action plan</span>
               <h2 id="case-plan-title">{casePlan.title}</h2>
               <p>{casePlan.summary}</p>
               <ol>
                 {casePlan.steps.map((step) => <li key={step.title}><strong>{step.title}.</strong> {step.description}</li>)}
               </ol>
               <p className="simulation-disclaimer">
-                {casePlanMode === "model" ? "AI-generated" : "Generic fallback"} simulation, not verified official guidance. Review it before saving a mock record. RightNow will not contact a government office, person or service.
+                This is a preparation guide, not official guidance. Confirm details with the official service before you continue. RightNow does not contact any office or person on your behalf.
               </p>
-            </section>
-          ) : null}
-
-          {activeMission === "safety" ? (
-            <section className="emergency-panel" aria-labelledby="safety-plan-title">
-              <h2 id="safety-plan-title">Immediate support plan</h2>
-              <p><strong>If anyone may still be in danger, call 112 now.</strong> Move to a safe place. Do not confront anyone or disturb the area.</p>
-              <ol>
-                <li>Use 112 for urgent police, fire or medical support.</li>
-                <li>When safe, note the time, place, people involved and items affected.</li>
-                <li>Keep photos, messages or other evidence only if it is safe to do so.</li>
-              </ol>
-              <p className="simulation-disclaimer">This demo has not contacted 112, police or anyone else.</p>
             </section>
           ) : null}
 
           {currentQuestion ? (
             <div ref={questionTarget} className="question-panel">
               <h2>{currentQuestion.prompt}</h2>
-              {currentQuestion.help ? <p>{currentQuestion.help}</p> : <p>Choose a synthetic answer for this public demo.</p>}
+              {currentQuestion.help ? <p>{currentQuestion.help}</p> : <p>Choose the option that best matches your situation.</p>}
               <div className="answer-grid">
                 {currentQuestion.options?.map((option) => (
                   <button className="answer-button" type="button" key={`${currentQuestion.factKey}-${String(option.value)}`} disabled={!hydrated} onClick={() => answerQuestion(option.value, option.label)}>
@@ -565,10 +536,10 @@ export function RightNowApp() {
             <div ref={preparedTarget} className="prepared-panel">
               <h2>
                 {preparedActions.every(({ missionId }) => missionId === "general")
-                  ? "Plan ready to simulate"
-                  : `${preparedActions.length} ${preparedActions.length === 1 ? "service" : "services"} ready to simulate`}
+                  ? "Ready to review"
+                  : `${preparedActions.length} ${preparedActions.length === 1 ? "service" : "services"} identified`}
               </h2>
-              <p>Review what RightNow would prepare. It stops before contacting an official service.</p>
+              <p>Review the details RightNow prepared. Nothing is sent until you continue.</p>
               <div className="prepared-list">
                 {preparedActions.map((action) => (
                   <div className="prepared-row" key={action.id}>
@@ -578,14 +549,14 @@ export function RightNowApp() {
                 ))}
               </div>
               <button className="primary-button" type="button" onClick={() => setReviewOpen(true)}>
-                <ListChecksIcon aria-hidden="true" size={19} /> Review your plan
+                <ListChecksIcon aria-hidden="true" size={19} /> Review your request
               </button>
             </div>
           ) : null}
         </section>
       </section>
 
-      <aside className="side-rail" aria-label="Household and civic inbox">
+      <aside className="side-rail" aria-label="Household and your requests">
         <section className="rail-intro">
           <h2>Your account</h2>
           <p>Facts you choose to save stay in this browser and can be reused when they help.</p>
@@ -599,7 +570,7 @@ export function RightNowApp() {
             </button>
           </div>
           {Object.keys(household.profile.facts).length === 0 ? (
-            <div className="empty-state">Facts you share appear here and can be reused across missions.</div>
+            <div className="empty-state">Facts you share appear here and can be reused across situations.</div>
           ) : (
             <div className="fact-list">
               {(Object.entries(household.profile.facts) as Array<[FactKey, FactValue]>).slice(0, 6).map(([key, value]) => (
@@ -611,17 +582,22 @@ export function RightNowApp() {
 
         <section className="rail-section">
           <div className="rail-title">
-            <h2>Civic inbox</h2>
+            <h2>Your requests</h2>
             <span className="rail-count">{household.inbox.length}</span>
           </div>
           {household.inbox.length === 0 ? (
-            <div className="empty-state">Plans you approve will appear here as simulations.</div>
+            <div className="empty-state">Requests you prepare will appear here so you can continue and track them.</div>
           ) : (
             <div className="inbox-list">
               {household.inbox.slice().reverse().slice(0, 8).map((item) => (
                 <div className="inbox-item" key={item.id}>
                   <strong>{item.title}</strong>
-                  <span>{item.status === "submitted" || item.status === "simulated" ? "Simulation recorded" : "Ready to simulate"}</span>
+                  <span>{statusLabel(item.status)}</span>
+                  {item.status !== "completed" ? (
+                    <button className="text-button" type="button" onClick={() => markCompleted(item.id)}>
+                      Mark as completed
+                    </button>
+                  ) : null}
                 </div>
               ))}
             </div>
@@ -631,7 +607,7 @@ export function RightNowApp() {
         <section className="rail-section">
           <div className="rail-title"><h2>Service check</h2><BuildingsIcon aria-hidden="true" size={18} /></div>
           <div className="empty-state">
-            <BellRingingIcon aria-hidden="true" size={17} /> Each saved change is checked against the services in this demo.
+            <BellRingingIcon aria-hidden="true" size={17} /> Each saved detail is checked against RightNow&rsquo;s connected services.
           </div>
         </section>
       </aside>
@@ -639,11 +615,9 @@ export function RightNowApp() {
       <HouseholdDialog
         open={householdOpen}
         profile={household.profile}
-        aiConsent={household.aiConsent}
         onOpenChange={setHouseholdOpen}
         onRemoveFact={removeFact}
         onLanguageChange={changeLanguage}
-        onAiConsentChange={changeAiConsent}
         onClear={clearAll}
       />
       <ReviewDialog
@@ -656,7 +630,6 @@ export function RightNowApp() {
         onToggle={toggleSelected}
         onSubmit={() => void submitSelected()}
       />
-      <ConsentDialog open={consentOpen} onChoose={chooseAiMode} />
     </main>
   );
 }

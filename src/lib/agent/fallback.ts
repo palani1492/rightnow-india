@@ -5,6 +5,12 @@ type MissionPattern = Readonly<{
   patterns: readonly RegExp[];
 }>;
 
+const safetyPatterns: readonly RegExp[] = [
+  /robbery|robbed|break[ -]?in|burglar|burglary|someone broke into|theft in progress/i,
+  /चोरी|डकैती|घर में घुस/i,
+  /திருட்டு|கொள்ளை|வீட்டில் புகுந்த/u,
+];
+
 const missionPatterns: readonly MissionPattern[] = [
   {
     missionId: "moving",
@@ -16,11 +22,7 @@ const missionPatterns: readonly MissionPattern[] = [
   },
   {
     missionId: "safety",
-    patterns: [
-      /robbery|robbed|break[ -]?in|burglar|burglary|someone broke into|theft in progress/i,
-      /चोरी|डकैती|घर में घुस/i,
-      /திருட்டு|கொள்ளை|வீட்டில் புகுந்த/u,
-    ],
+    patterns: safetyPatterns,
   },
   {
     missionId: "job-loss",
@@ -74,36 +76,40 @@ const missionPatterns: readonly MissionPattern[] = [
 
 const replies: Readonly<Record<Language, Readonly<Record<MissionId, string>>>> = {
   en: {
-    pregnancy: "I found the pregnancy mission. I can prepare maternity and birth-readiness services with a few non-sensitive details.",
-    college: "I found the college mission. I can check scholarship and academic-document readiness.",
-    work: "I found the first-work mission. I can prepare tax and social-security readiness without asking for identifiers.",
-    "job-loss": "I found the job-loss mission. I can check benefit, claim, and career-service readiness.",
-    business: "I found the small-business mission. I can prepare registration, tax, and funding-readiness actions.",
-    grievance: "I found the public-service problem mission. I can prepare the right mock grievance path.",
-    safety: "I found an urgent safety need. I can show the immediate official support route and prepare a simulated police-report plan.",
-    moving: "I found an interstate move. I can prepare the common address, voter, ration-portability and vehicle-update steps for review.",
+    pregnancy: "I can help prepare maternity benefits, delivery support and birth-registration readiness. I just need a few details.",
+    college: "I can help you get ready for scholarships and academic-document access on DigiLocker.",
+    work: "I can help prepare PAN, tax and workplace social-security readiness for your new work.",
+    "job-loss": "I can help you check provident-fund, insurance and career-service support after a job loss.",
+    business: "I can help prepare registration, tax and finance readiness for your business.",
+    grievance: "I can help structure this into a clear grievance for CPGRAMS or the National Consumer Helpline.",
+    safety: "Your safety comes first. Once you're safe, I can also help prepare a police-report checklist.",
+    moving: "I can help prepare the common address, voter, ration-portability and vehicle-update steps for your move.",
   },
   hi: {
-    pregnancy: "मैंने गर्भावस्था मिशन पहचाना है। कुछ गैर-संवेदनशील जानकारी से सेवाएं तैयार की जा सकती हैं।",
-    college: "मैंने कॉलेज मिशन पहचाना है। छात्रवृत्ति और शैक्षणिक दस्तावेज़ तैयारी जाँची जा सकती है।",
-    work: "मैंने पहला काम मिशन पहचाना है। पहचान संख्या के बिना कर और सामाजिक सुरक्षा तैयारी की जा सकती है।",
-    "job-loss": "मैंने नौकरी छूटने का मिशन पहचाना है। लाभ, दावा और करियर सेवाओं की तैयारी जाँची जा सकती है।",
-    business: "मैंने छोटा व्यवसाय मिशन पहचाना है। पंजीकरण, कर और वित्त तैयारी की जा सकती है।",
-    grievance: "मैंने सार्वजनिक सेवा समस्या मिशन पहचाना है। सही नकली शिकायत मार्ग तैयार किया जा सकता है।",
-    safety: "मैंने एक तत्काल सुरक्षा जरूरत पहचानी है। मैं तत्काल आधिकारिक सहायता मार्ग और एक सिम्युलेटेड पुलिस-रिपोर्ट योजना दिखा सकता हूँ।",
-    moving: "मैंने दूसरे राज्य में स्थानांतरण पहचाना है। मैं पते, मतदाता, राशन-पोर्टेबिलिटी और वाहन अपडेट के सामान्य कदम तैयार कर सकता हूँ।",
+    pregnancy: "मातृत्व लाभ, प्रसव सहायता और जन्म-पंजीकरण की तैयारी में मदद कर सकता हूँ। कुछ जानकारी चाहिए।",
+    college: "छात्रवृत्ति और DigiLocker पर शैक्षणिक दस्तावेज़ों की तैयारी में मदद कर सकता हूँ।",
+    work: "आपके नए काम के लिए PAN, कर और सामाजिक सुरक्षा तैयारी में मदद कर सकता हूँ।",
+    "job-loss": "नौकरी जाने के बाद भविष्य निधि, बीमा और करियर सेवाओं की जाँच में मदद कर सकता हूँ।",
+    business: "आपके व्यवसाय के लिए पंजीकरण, कर और वित्त तैयारी में मदद कर सकता हूँ।",
+    grievance: "आपकी शिकायत को CPGRAMS या राष्ट्रीय उपभोक्ता हेल्पलाइन के लिए स्पष्ट रूप से तैयार करने में मदद कर सकता हूँ।",
+    safety: "आपकी सुरक्षा सबसे पहले है। सुरक्षित होने के बाद मैं पुलिस रिपोर्ट की तैयारी में भी मदद कर सकता हूँ।",
+    moving: "मैं पता, मतदाता, राशन पोर्टेबिलिटी और वाहन अपडेट जैसे सामान्य कदम तैयार करने में मदद कर सकता हूँ।",
   },
   ta: {
-    pregnancy: "கர்ப்பகால தேவையை கண்டறிந்தேன். முக்கிய சேவைகளை தனிப்பட்ட அடையாளங்கள் இல்லாமல் தயார் செய்யலாம்.",
-    college: "கல்லூரி தேவையை கண்டறிந்தேன். உதவித்தொகை மற்றும் கல்வி ஆவணத் தயார்நிலையை பார்க்கலாம்.",
-    work: "முதல் வேலை தேவையை கண்டறிந்தேன். அடையாள எண்கள் இல்லாமல் வரி மற்றும் சமூக பாதுகாப்பை தயார் செய்யலாம்.",
-    "job-loss": "வேலை இழப்பு தேவையை கண்டறிந்தேன். பயன், கோரிக்கை மற்றும் வேலைவாய்ப்பு சேவைகளை பார்க்கலாம்.",
-    business: "சிறு வணிக தேவையை கண்டறிந்தேன். பதிவு, வரி மற்றும் நிதி தயார்நிலையை பார்க்கலாம்.",
-    grievance: "பொது சேவை புகாரை கண்டறிந்தேன். சரியான மாதிரி புகார் வழியை தயார் செய்யலாம்.",
-    safety: "அவசர பாதுகாப்பு தேவையை கண்டறிந்தேன். உடனடி அதிகாரப்பூர்வ உதவி வழியையும் காவல் புகார் மாதிரி திட்டத்தையும் காட்டலாம்.",
-    moving: "மாநிலம் மாறும் தேவையை கண்டறிந்தேன். முகவரி, வாக்காளர், ரேஷன் எடுத்துச்செல்லல் மற்றும் வாகனப் புதுப்பிப்பு படிகளைத் தயாரிக்கலாம்.",
+    pregnancy: "மகப்பேறு உதவி, பிரசவ ஆதரவு மற்றும் பிறப்புப் பதிவு தயார்நிலையில் உதவ முடியும். சில விவரங்கள் தேவை.",
+    college: "உதவித்தொகை மற்றும் DigiLocker வழியாக கல்வி ஆவணத் தயார்நிலையில் உதவ முடியும்.",
+    work: "உங்கள் புதிய வேலைக்கான PAN, வரி மற்றும் சமூகப் பாதுகாப்பு தயார்நிலையில் உதவ முடியும்.",
+    "job-loss": "வேலை இழப்புக்குப் பிறகு EPF, காப்பீடு மற்றும் வேலைவாய்ப்பு சேவைகளை சரிபார்க்க உதவ முடியும்.",
+    business: "உங்கள் தொழிலுக்கான பதிவு, வரி மற்றும் நிதி தயார்நிலையில் உதவ முடியும்.",
+    grievance: "உங்கள் புகாரை CPGRAMS அல்லது தேசிய நுகர்வோர் உதவி மையத்திற்கு தெளிவாக தயார் செய்ய உதவ முடியும்.",
+    safety: "உங்கள் பாதுகாப்பே முதன்மை. பாதுகாப்பாக இருந்த பிறகு காவல் புகார் தயார்நிலையிலும் உதவ முடியும்.",
+    moving: "முகவரி, வாக்காளர் பதிவு, ரேஷன் இடமாற்றம் மற்றும் வாகனப் புதுப்பிப்பு ஆகிய பொதுவான படிகளைத் தயார் செய்ய உதவ முடியும்.",
   },
 };
+
+export function isSafetyMessage(message: string): boolean {
+  return safetyPatterns.some((pattern) => pattern.test(message));
+}
 
 export function safeMissionReply(
   missionId: MissionId | null,
@@ -120,41 +126,41 @@ export function safeMissionReply(
 }
 
 export function casePlanReply(language: Language): string {
-  if (language === "hi") return "आपकी जानकारी के आधार पर मैंने एक समीक्षा योग्य सिम्युलेटेड योजना तैयार की है।";
-  if (language === "ta") return "நீங்கள் பகிர்ந்த தகவலின் அடிப்படையில் மதிப்பாய்வு செய்யக்கூடிய சிமுலேஷன் திட்டத்தைத் தயாரித்துள்ளேன்.";
-  return "I prepared a reviewable simulation plan based on what you shared.";
+  if (language === "hi") return "आपकी जानकारी के आधार पर मैंने आपके लिए एक कार्य योजना तैयार की है।";
+  if (language === "ta") return "நீங்கள் பகிர்ந்த தகவலின் அடிப்படையில் உங்களுக்கான செயல் திட்டத்தைத் தயாரித்துள்ளேன்.";
+  return "Based on what you shared, I've put together an action plan for you.";
 }
 
 function fallbackCasePlan(language: Language): AgentResponse["casePlan"] {
   if (language === "hi") {
     return {
-      title: "आपकी स्थिति की योजना",
-      summary: "AI उपलब्ध न होने पर भी यह सुरक्षित सिम्युलेशन आपको अगला कदम व्यवस्थित करने देता है।",
+      title: "आपकी स्थिति के लिए योजना",
+      summary: "आपने जो साझा किया, उसके आधार पर यह योजना अगला कदम व्यवस्थित करने में मदद करती है।",
       steps: [
         { title: "लक्ष्य स्पष्ट करें", description: "आप क्या बदलना या पूरा करना चाहते हैं, उसे एक वाक्य में लिखें।" },
         { title: "ज़रूरी जानकारी जुटाएँ", description: "केवल गैर-संवेदनशील तथ्य और संभावित दस्तावेज़ों की सूची बनाएँ।" },
-        { title: "सही मार्ग की पुष्टि करें", description: "कोई वास्तविक कदम उठाने से पहले आधिकारिक स्रोत या योग्य पेशेवर से जाँचें।" },
+        { title: "सही मार्ग की पुष्टि करें", description: "कोई कदम उठाने से पहले आधिकारिक स्रोत या योग्य पेशेवर से जाँचें।" },
       ],
     };
   }
   if (language === "ta") {
     return {
-      title: "உங்கள் சூழ்நிலைத் திட்டம்",
-      summary: "AI கிடைக்காத போதும், இந்த பாதுகாப்பான சிமுலேஷன் அடுத்த படிகளை ஒழுங்குபடுத்த உதவும்.",
+      title: "உங்கள் சூழ்நிலைக்கான திட்டம்",
+      summary: "நீங்கள் பகிர்ந்ததின் அடிப்படையில் இந்தத் திட்டம் அடுத்த படியை ஒழுங்குபடுத்த உதவும்.",
       steps: [
         { title: "இலக்கை தெளிவாக்குங்கள்", description: "நீங்கள் மாற்ற அல்லது முடிக்க விரும்புவதை ஒரு வாக்கியத்தில் எழுதுங்கள்." },
         { title: "தேவையான தகவலை சேருங்கள்", description: "உணர்திறன் இல்லாத தகவல்கள் மற்றும் சாத்தியமான ஆவணங்களின் பட்டியலை மட்டும் உருவாக்குங்கள்." },
-        { title: "சரியான வழியை உறுதிசெய்யுங்கள்", description: "உண்மையான நடவடிக்கைக்கு முன் அதிகாரப்பூர்வ ஆதாரம் அல்லது தகுதியான நிபுணரிடம் சரிபாருங்கள்." },
+        { title: "சரியான வழியை உறுதிசெய்யுங்கள்", description: "நடவடிக்கை எடுப்பதற்கு முன் அதிகாரப்பூர்வ ஆதாரம் அல்லது தகுதியான நிபுணரிடம் சரிபாருங்கள்." },
       ],
     };
   }
   return {
-    title: "Your situation plan",
-    summary: "Even when AI is unavailable, this safe simulation helps organise a reviewable next step.",
+    title: "A plan for your situation",
+    summary: "Based on what you shared, this plan helps you organise the next step.",
     steps: [
       { title: "Clarify the outcome", description: "Write down what you want to change or complete in one sentence." },
       { title: "Gather what matters", description: "List only non-sensitive facts and the records you may need." },
-      { title: "Confirm the right route", description: "Check an official source or qualified professional before taking any real action." },
+      { title: "Confirm the right route", description: "Check an official source or qualified professional before taking any action." },
     ],
   };
 }

@@ -31,13 +31,13 @@ export function ReviewDialog({
         <Dialog.Overlay className="dialog-overlay" />
         <Dialog.Content className="dialog-content">
           <div className="rail-title">
-            <Dialog.Title className="dialog-title">Review your plan</Dialog.Title>
+            <Dialog.Title className="dialog-title">Review your request</Dialog.Title>
             <Dialog.Close className="icon-button" aria-label="Close review">
               <XIcon aria-hidden="true" size={18} />
             </Dialog.Close>
           </div>
           <Dialog.Description className="dialog-description">
-            Select the steps to simulate. Nothing is submitted to any government service or portal.
+            Select the services to continue with. Nothing is submitted to any government service or portal.
           </Dialog.Description>
 
           <div className="review-list">
@@ -83,10 +83,10 @@ export function ReviewDialog({
           </div>
 
           <div className="notice-box">
-            <FileTextIcon aria-hidden="true" size={18} /> This is a simulation. RightNow never makes a call, files a report, uploads a document or submits an application.
+            <FileTextIcon aria-hidden="true" size={18} /> This is a preparation step. RightNow never makes a call, files a report, uploads a document or submits an application on your behalf.
           </div>
           <p className="field-help">
-            If you continue, the selected mock plan and reference stay in this browser until you clear the household.
+            If you continue, this request and its details stay in this browser until you clear your account.
           </p>
           {error ? <div className="error-callout" role="alert">{error}</div> : null}
 
@@ -99,7 +99,7 @@ export function ReviewDialog({
               onClick={onSubmit}
             >
               <CheckCircleIcon aria-hidden="true" size={19} weight="fill" />
-              {submitting ? "Creating your simulation" : `Simulate ${selectedIds.length} next ${selectedIds.length === 1 ? "step" : "steps"}`}
+              {submitting ? "Preparing your request…" : `Prepare ${selectedIds.length} ${selectedIds.length === 1 ? "service" : "services"}`}
             </button>
           </div>
         </Dialog.Content>

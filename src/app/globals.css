@@ -989,6 +989,12 @@ a {
   font-size: 11px;
 }
 
+.inbox-item .text-button {
+  margin-top: 6px;
+  padding: 4px 0;
+  font-size: 11px;
+}
+
 .fact-list {
   display: grid;
   gap: 7px;

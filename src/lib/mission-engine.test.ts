@@ -78,11 +78,11 @@ describe("eligibility", () => {
     );
   });
 
-  it("marks PMMVY as eligible for a matching synthetic profile", () => {
+  it("marks PMMVY as eligible for a matching profile", () => {
     const result = evaluateConnector("pmmvy", pregnancyProfile);
 
     expect(result.status).toBe("eligible");
-    expect(result.reason).toContain("demo rules");
+    expect(result.reason).toContain("official service makes the final decision");
     expect(result.missingFacts).toEqual([]);
   });
 
@@ -145,7 +145,7 @@ describe("preparation and mission planning", () => {
     expect(action.reviewItems).toEqual(
       expect.arrayContaining([expect.objectContaining({ factKey: "childOrder", value: "1" })]),
     );
-    expect(action.disclaimer).toContain("mock");
+    expect(action.disclaimer).toContain("not a government application");
   });
 
   it("plans all matching pregnancy services and asks only unanswered questions", () => {

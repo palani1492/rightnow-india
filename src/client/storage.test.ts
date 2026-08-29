@@ -2,7 +2,7 @@ import { describe, expect, it, vi } from "vitest";
 import { clearHousehold, createEmptyHousehold, loadHousehold, saveHousehold, STORAGE_KEY } from "./storage";
 
 describe("household storage", () => {
-  it("returns an empty synthetic household when storage is missing or corrupt", () => {
+  it("returns an empty household when storage is missing or corrupt", () => {
     expect(loadHousehold({ getItem: () => null }).profile.id).toBe("synthetic-household");
     expect(loadHousehold({ getItem: () => "not-json" }).inbox).toEqual([]);
   });
@@ -23,7 +23,20 @@ describe("household storage", () => {
     const next = clearHousehold({ removeItem });
     expect(removeItem).toHaveBeenCalledWith(STORAGE_KEY);
     expect(next.profile.facts).toEqual({});
-    expect(next.aiConsent).toBeNull();
+    expect(next.inbox).toEqual([]);
+  });
+
+  it("migrates a household saved before the aiConsent field was removed", () => {
+    const base = createEmptyHousehold("2026-08-28T10:00:00.000Z");
+    const legacy = JSON.stringify({
+      ...base,
+      profile: { ...base.profile, facts: { state: "Tamil Nadu" } },
+      aiConsent: false,
+    });
+
+    const loaded = loadHousehold({ getItem: () => legacy });
+    expect(loaded.profile.facts.state).toBe("Tamil Nadu");
+    expect(loaded).not.toHaveProperty("aiConsent");
   });
 
   it("drops household state with a malformed inbox item", () => {

@@ -7,16 +7,14 @@ import type { FactKey, FactValue, HouseholdProfile, LanguageCode } from "@/lib/t
 interface HouseholdDialogProps {
   open: boolean;
   profile: HouseholdProfile;
-  aiConsent: boolean | null;
   onOpenChange: (open: boolean) => void;
   onRemoveFact: (key: FactKey) => void;
   onLanguageChange: (language: LanguageCode) => void;
-  onAiConsentChange: (consent: boolean | null) => void;
   onClear: () => void;
 }
 
 export const factLabels: Partial<Record<FactKey, string>> = {
-  lifeEvent: "Current mission",
+  lifeEvent: "Current situation",
   state: "State",
   residenceType: "Area",
   incomeBand: "Income band",
@@ -49,11 +47,9 @@ export function formatFact(value: FactValue): string {
 export function HouseholdDialog({
   open,
   profile,
-  aiConsent,
   onOpenChange,
   onRemoveFact,
   onLanguageChange,
-  onAiConsentChange,
   onClear,
 }: HouseholdDialogProps) {
   const facts = Object.entries(profile.facts) as Array<[FactKey, FactValue]>;
@@ -70,7 +66,7 @@ export function HouseholdDialog({
             </Dialog.Close>
           </div>
           <Dialog.Description className="dialog-description">
-            Only synthetic choices are saved in this browser. Remove any item or clear the household at any time.
+            Details you share are saved only in this browser. Remove any item or clear your account at any time.
           </Dialog.Description>
 
           <label className="language-field">
@@ -84,21 +80,7 @@ export function HouseholdDialog({
               <option value="ta">தமிழ்</option>
             </select>
           </label>
-          <p className="field-help">Generated replies and voice input use this language. Guided questions are currently in English.</p>
-
-          <label className="language-field">
-            <span>AI routing</span>
-            <select
-              value={aiConsent === null ? "ask" : aiConsent ? "on" : "off"}
-              onChange={(event) => onAiConsentChange(
-                event.target.value === "ask" ? null : event.target.value === "on",
-              )}
-            >
-              <option value="ask">Ask before sending</option>
-              <option value="on">Use AI for open-ended plans</option>
-              <option value="off">Guided mode only</option>
-            </select>
-          </label>
+          <p className="field-help">Replies and voice input use this language. Guided questions are currently in English.</p>
 
           <div className="fact-editor">
             {facts.length === 0 ? (

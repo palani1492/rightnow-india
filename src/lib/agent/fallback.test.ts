@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { deterministicInterpretation } from "./fallback";
+import { deterministicInterpretation, isSafetyMessage } from "./fallback";
 
 describe("deterministicInterpretation", () => {
   it.each([
@@ -21,11 +21,11 @@ describe("deterministicInterpretation", () => {
     });
   });
 
-  it("builds a safe generic simulation when no accelerator matches", () => {
+  it("builds a safe generic action plan when no accelerator matches", () => {
     const result = deterministicInterpretation("Help me renew a fishing permit");
 
     expect(result.missionId).toBeNull();
-    expect(result.reply).toContain("reviewable simulation plan");
+    expect(result.reply).toContain("action plan");
     expect(result.casePlan?.steps).toHaveLength(3);
     expect(result.reply).not.toContain("demo");
   });
@@ -36,7 +36,18 @@ describe("deterministicInterpretation", () => {
     );
 
     expect(result.missionId).toBeNull();
-    expect(result.casePlan?.title).toBe("Your situation plan");
+    expect(result.casePlan?.title).toBe("A plan for your situation");
     expect(result.reply).not.toContain("interstate");
+  });
+});
+
+describe("isSafetyMessage", () => {
+  it("detects an urgent safety message independent of the mission engine", () => {
+    expect(isSafetyMessage("Someone broke into my house")).toBe(true);
+    expect(isSafetyMessage("चोरी हो गई है")).toBe(true);
+  });
+
+  it("does not flag an unrelated message", () => {
+    expect(isSafetyMessage("I am moving to a different state")).toBe(false);
   });
 });

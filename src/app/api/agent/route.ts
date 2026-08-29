@@ -49,7 +49,7 @@ export async function POST(request: Request): Promise<Response> {
     return errorResponse(
       422,
       "sensitive-input",
-      `Remove the ${sensitive.kind} value. This prototype never needs identity or account numbers.`,
+      `Remove the ${sensitive.kind} value. RightNow never needs identity or account numbers.`,
     );
   }
 

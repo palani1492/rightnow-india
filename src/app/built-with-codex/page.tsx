@@ -147,7 +147,7 @@ const verification = [
   {
     name: "Unit and integration tests",
     command: "npm run test:coverage",
-    status: "88 passed · 92.5% statements · 100% functions",
+    status: "109 passed · 91.2% statements · 100% functions",
     verified: true,
   },
   {

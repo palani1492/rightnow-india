@@ -48,7 +48,7 @@ export async function POST(request: Request): Promise<Response> {
 
   const parsed = mockGatewayRequestSchema.safeParse(bodyResult.value);
   if (!parsed.success) {
-    return errorResponse(400, "invalid-request", "Only prepared demo actions can be reviewed.");
+    return errorResponse(400, "invalid-request", "Only prepared requests can be reviewed.");
   }
 
   const secret = gatewaySecret();
@@ -56,7 +56,7 @@ export async function POST(request: Request): Promise<Response> {
     return errorResponse(
       503,
       "gateway-unconfigured",
-      "Mock submission is temporarily unavailable.",
+      "RightNow could not prepare this request right now. Please try again shortly.",
     );
   }
 

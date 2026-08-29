@@ -6,7 +6,7 @@ import "./globals.css";
 export const metadata: Metadata = {
   title: "RightNow India | Whatever changed, start here",
   description:
-    "An independent AI-routed prototype that turns any life situation into a reviewable simulation using synthetic data.",
+    "RightNow India helps you describe any life situation in your own words, understand what applies, and prepare to act across services like Passport Seva, UIDAI, DigiLocker, UMANG and Parivahan.",
 };
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
@@ -15,7 +15,7 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
       <body>
         <div className="prototype-bar">
           <ShieldCheckIcon aria-hidden="true" size={15} weight="fill" />
-          <span>Independent prototype. Synthetic data. No government connections.</span>
+          <span>RightNow India is an independent civic-assistance product and is not affiliated with the Government of India.</span>
           <Link href="/built-with-codex">Built with Codex</Link>
         </div>
         {children}

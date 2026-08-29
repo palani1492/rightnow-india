@@ -70,7 +70,7 @@ const createConnector = (definition: ConnectorDefinition): ServiceConnector => (
     if (missingFacts.length > 0) {
       return {
         status: "needs_information",
-        reason: "RightNow needs a few non-sensitive facts before applying the demo rules.",
+        reason: "RightNow needs a few more non-sensitive details to check this service.",
         missingFacts: [...missingFacts],
         evidence,
       } satisfies EligibilityResult;
@@ -88,7 +88,7 @@ const createConnector = (definition: ConnectorDefinition): ServiceConnector => (
     return {
       status: "eligible",
       reason:
-        "Your synthetic household appears to match this prototype's demo rules. The official service makes the final decision.",
+        "Based on what you've shared, this service looks relevant to your situation. The official service makes the final decision.",
       missingFacts: [],
       evidence,
     } satisfies EligibilityResult;
@@ -115,7 +115,7 @@ const createConnector = (definition: ConnectorDefinition): ServiceConnector => (
       })),
       sources: definition.sources,
       lastVerified: LAST_VERIFIED,
-      disclaimer: "Independent prototype. This is a mock preparation, not a government application.",
+      disclaimer: "This is a preparation checklist, not a government application. Nothing has been submitted.",
     } satisfies PreparedAction;
   },
 });
@@ -131,14 +131,14 @@ export const serviceConnectors: readonly ServiceConnector[] = [
     shortTitle: "PMMVY",
     description: "Prepare the facts and document checklist used for maternity-benefit review.",
     requiredFacts: ["lifeEvent", "state", "childOrder", "deliveryStatus", "hasBankAccount"],
-    requiredDocuments: ["Synthetic identity proof", "Synthetic bank proof", "Synthetic maternity record"],
+    requiredDocuments: ["Identity proof", "Bank proof", "Maternity record"],
     matches: (profile) =>
       isLifeEvent(profile, "pregnancy") &&
       Number(profile.facts.childOrder) <= 2 &&
       ["expecting", "recent_birth"].includes(String(profile.facts.deliveryStatus)) &&
       profile.facts.hasBankAccount === true,
     nonEligibleReason:
-      "This demo rule prepares PMMVY only for an expecting or recent mother, for the first two children, with a bank account.",
+      "RightNow prepares PMMVY only for an expecting or recent mother, for the first two children, with a bank account.",
     sources: [
       {
         label: "PMMVY official FAQs",
@@ -153,11 +153,11 @@ export const serviceConnectors: readonly ServiceConnector[] = [
     shortTitle: "JSY",
     description: "Prepare a state-aware institutional-delivery assistance checklist.",
     requiredFacts: ["lifeEvent", "state", "residenceType", "deliveryStatus"],
-    requiredDocuments: ["Synthetic identity proof", "Synthetic pregnancy record", "Synthetic address proof"],
+    requiredDocuments: ["Identity proof", "Pregnancy record", "Address proof"],
     matches: (profile) =>
       isLifeEvent(profile, "pregnancy") &&
       ["expecting", "recent_birth"].includes(String(profile.facts.deliveryStatus)),
-    nonEligibleReason: "This demo rule is limited to a current pregnancy or recent delivery.",
+    nonEligibleReason: "This applies only to a current pregnancy or recent delivery.",
     sources: [
       {
         label: "National Health Mission: JSY",
@@ -172,11 +172,11 @@ export const serviceConnectors: readonly ServiceConnector[] = [
     shortTitle: "JSSK",
     description: "Explain and prepare access to free public-facility maternity entitlements.",
     requiredFacts: ["lifeEvent", "state", "deliveryStatus"],
-    requiredDocuments: ["Synthetic pregnancy or discharge record"],
+    requiredDocuments: ["Pregnancy or discharge record"],
     matches: (profile) =>
       isLifeEvent(profile, "pregnancy") &&
       ["expecting", "recent_birth"].includes(String(profile.facts.deliveryStatus)),
-    nonEligibleReason: "This demo rule is limited to pregnancy and recent-birth support.",
+    nonEligibleReason: "This applies only to pregnancy and recent-birth support.",
     sources: [
       {
         label: "National Health Mission: JSSK",
@@ -191,7 +191,7 @@ export const serviceConnectors: readonly ServiceConnector[] = [
     shortTitle: "Birth registration",
     description: "Prepare a local birth-registration checklist after delivery.",
     requiredFacts: ["lifeEvent", "state", "deliveryStatus"],
-    requiredDocuments: ["Synthetic hospital birth record", "Synthetic parent identity proof"],
+    requiredDocuments: ["Hospital birth record", "Parent identity proof"],
     matches: (profile) =>
       isLifeEvent(profile, "pregnancy") && profile.facts.deliveryStatus === "recent_birth",
     nonEligibleReason: "Birth-registration preparation becomes relevant after a birth.",
@@ -202,15 +202,15 @@ export const serviceConnectors: readonly ServiceConnector[] = [
     missionIds: ["college"],
     title: "National Scholarship Portal readiness",
     shortTitle: "Scholarships",
-    description: "Match a synthetic student profile to scholarship application readiness.",
+    description: "Match your student profile to scholarship application readiness.",
     requiredFacts: ["lifeEvent", "state", "studentStatus", "studyLevel", "incomeBand"],
-    requiredDocuments: ["Synthetic marksheet", "Synthetic admission proof", "Synthetic income record"],
+    requiredDocuments: ["Marksheet", "Admission proof", "Income record"],
     matches: (profile) =>
       isLifeEvent(profile, "college") &&
       profile.facts.studentStatus === true &&
       ["low", "middle"].includes(String(profile.facts.incomeBand)),
     nonEligibleReason:
-      "This prototype's scholarship demo covers current students in the low or middle household-income ranges.",
+      "RightNow checks scholarship readiness for current students in the low or middle household-income ranges.",
     sources: [{ label: "National Scholarship Portal", url: "https://scholarships.gov.in/" }],
   }),
   createConnector({
@@ -220,7 +220,7 @@ export const serviceConnectors: readonly ServiceConnector[] = [
     shortTitle: "DigiLocker",
     description: "Prepare a safe checklist for locating academic documents in DigiLocker.",
     requiredFacts: ["lifeEvent", "studentStatus", "hasAcademicRecords"],
-    requiredDocuments: ["Synthetic institution and passing-year details"],
+    requiredDocuments: ["Institution and passing-year details"],
     matches: (profile) =>
       isLifeEvent(profile, "college") &&
       profile.facts.studentStatus === true &&
@@ -235,12 +235,12 @@ export const serviceConnectors: readonly ServiceConnector[] = [
     shortTitle: "Academic credits",
     description: "Prepare the details needed to explore an Academic Bank of Credits account.",
     requiredFacts: ["lifeEvent", "studentStatus", "studyLevel"],
-    requiredDocuments: ["Synthetic institution record", "Synthetic enrolment record"],
+    requiredDocuments: ["Institution record", "Enrolment record"],
     matches: (profile) =>
       isLifeEvent(profile, "college") &&
       profile.facts.studentStatus === true &&
       ["undergraduate", "postgraduate"].includes(String(profile.facts.studyLevel)),
-    nonEligibleReason: "This demo is limited to current higher-education students.",
+    nonEligibleReason: "This applies only to current higher-education students.",
     sources: [{ label: "Academic Bank of Credits", url: "https://www.abc.gov.in/" }],
   }),
   createConnector({
@@ -250,7 +250,7 @@ export const serviceConnectors: readonly ServiceConnector[] = [
     shortTitle: "PAN",
     description: "Prepare a non-sensitive PAN application checklist for a new worker.",
     requiredFacts: ["lifeEvent", "state", "workType", "hasPan"],
-    requiredDocuments: ["Synthetic identity proof", "Synthetic date-of-birth proof", "Synthetic address proof"],
+    requiredDocuments: ["Identity proof", "Date-of-birth proof", "Address proof"],
     matches: (profile) => isLifeEvent(profile, "work") && profile.facts.hasPan === false,
     nonEligibleReason: "A new PAN application is not prepared when the profile says one already exists.",
     sources: [
@@ -267,12 +267,12 @@ export const serviceConnectors: readonly ServiceConnector[] = [
     shortTitle: "Income tax",
     description: "Prepare a first-year income and record checklist without making a tax conclusion.",
     requiredFacts: ["lifeEvent", "workType", "annualIncomeBand", "hasPan"],
-    requiredDocuments: ["Synthetic income summary", "Synthetic tax-deduction record"],
+    requiredDocuments: ["Income summary", "Tax-deduction record"],
     matches: (profile) =>
       isLifeEvent(profile, "work") &&
       profile.facts.hasPan === true &&
       profile.facts.annualIncomeBand !== "none",
-    nonEligibleReason: "This demo requires existing PAN readiness and reported work income.",
+    nonEligibleReason: "This needs existing PAN readiness and reported work income.",
     sources: [
       {
         label: "Income Tax Department: file ITR online",
@@ -287,12 +287,12 @@ export const serviceConnectors: readonly ServiceConnector[] = [
     shortTitle: "EPFO",
     description: "Prepare questions to raise with an employer about provident-fund enrolment.",
     requiredFacts: ["lifeEvent", "workType", "employerType"],
-    requiredDocuments: ["Synthetic offer letter", "Synthetic employer details"],
+    requiredDocuments: ["Offer letter", "Employer details"],
     matches: (profile) =>
       isLifeEvent(profile, "work") &&
       profile.facts.workType === "salaried" &&
       profile.facts.employerType === "covered",
-    nonEligibleReason: "This demo prepares EPFO enrolment only for a covered salaried workplace.",
+    nonEligibleReason: "RightNow prepares EPFO enrolment only for a covered salaried workplace.",
     sources: [{ label: "Employees' Provident Fund Organisation", url: "https://www.epfindia.gov.in/site_en/index.php" }],
   }),
   createConnector({
@@ -302,13 +302,13 @@ export const serviceConnectors: readonly ServiceConnector[] = [
     shortTitle: "ESIC",
     description: "Prepare employer and wage details for an ESIC coverage conversation.",
     requiredFacts: ["lifeEvent", "workType", "employerType", "annualIncomeBand"],
-    requiredDocuments: ["Synthetic wage record", "Synthetic employer details"],
+    requiredDocuments: ["Wage record", "Employer details"],
     matches: (profile) =>
       isLifeEvent(profile, "work") &&
       profile.facts.workType === "salaried" &&
       profile.facts.employerType === "covered" &&
       ["under_3l", "3l_to_8l"].includes(String(profile.facts.annualIncomeBand)),
-    nonEligibleReason: "This demo prepares ESIC only for a covered salaried workplace in its sample wage ranges.",
+    nonEligibleReason: "RightNow prepares ESIC only for a covered salaried workplace in its sample wage ranges.",
     sources: [{ label: "Employees' State Insurance Corporation", url: "https://www.esic.gov.in/" }],
   }),
   createConnector({
@@ -318,13 +318,13 @@ export const serviceConnectors: readonly ServiceConnector[] = [
     shortTitle: "EPFO claim",
     description: "Prepare a provident-fund claim checklist after a job loss.",
     requiredFacts: ["lifeEvent", "jobStatus", "previousCoverage", "hasUan"],
-    requiredDocuments: ["Synthetic UAN status", "Synthetic bank record", "Synthetic last-employment record"],
+    requiredDocuments: ["UAN status", "Bank record", "Last-employment record"],
     matches: (profile) =>
       isLifeEvent(profile, "job-loss") &&
       profile.facts.jobStatus === "unemployed" &&
       ["epfo", "both"].includes(String(profile.facts.previousCoverage)) &&
       profile.facts.hasUan === true,
-    nonEligibleReason: "This demo requires prior EPFO coverage, unemployment and UAN readiness.",
+    nonEligibleReason: "This needs prior EPFO coverage, unemployment and UAN readiness.",
     sources: [{ label: "Employees' Provident Fund Organisation", url: "https://www.epfindia.gov.in/site_en/index.php" }],
   }),
   createConnector({
@@ -334,12 +334,12 @@ export const serviceConnectors: readonly ServiceConnector[] = [
     shortTitle: "ESIC assistance",
     description: "Prepare a prior-coverage checklist for ESIC unemployment support exploration.",
     requiredFacts: ["lifeEvent", "jobStatus", "previousCoverage"],
-    requiredDocuments: ["Synthetic insurance record", "Synthetic last-employment record"],
+    requiredDocuments: ["Insurance record", "Last-employment record"],
     matches: (profile) =>
       isLifeEvent(profile, "job-loss") &&
       profile.facts.jobStatus === "unemployed" &&
       ["esic", "both"].includes(String(profile.facts.previousCoverage)),
-    nonEligibleReason: "This demo requires unemployment and prior ESIC coverage.",
+    nonEligibleReason: "This needs unemployment and prior ESIC coverage.",
     sources: [{ label: "Employees' State Insurance Corporation", url: "https://www.esic.gov.in/" }],
   }),
   createConnector({
@@ -349,10 +349,10 @@ export const serviceConnectors: readonly ServiceConnector[] = [
     shortTitle: "Career services",
     description: "Prepare a profile for job-search and career-service discovery.",
     requiredFacts: ["lifeEvent", "jobStatus", "state"],
-    requiredDocuments: ["Synthetic education and work summary"],
+    requiredDocuments: ["Education and work summary"],
     matches: (profile) =>
       isLifeEvent(profile, "job-loss") && profile.facts.jobStatus === "unemployed",
-    nonEligibleReason: "This demo journey is prepared for a person currently seeking work.",
+    nonEligibleReason: "This is prepared for a person currently seeking work.",
     sources: [{ label: "National Career Service", url: "https://www.ncs.gov.in/" }],
   }),
   createConnector({
@@ -362,12 +362,12 @@ export const serviceConnectors: readonly ServiceConnector[] = [
     shortTitle: "Udyam",
     description: "Prepare a micro, small or medium enterprise registration checklist.",
     requiredFacts: ["lifeEvent", "businessStage", "businessType", "hasPan"],
-    requiredDocuments: ["Synthetic PAN status", "Synthetic business activity summary"],
+    requiredDocuments: ["PAN status", "Business activity summary"],
     matches: (profile) =>
       isLifeEvent(profile, "business") &&
       ["planning", "operating"].includes(String(profile.facts.businessStage)) &&
       profile.facts.hasPan === true,
-    nonEligibleReason: "This demo requires a planned or operating business and PAN readiness.",
+    nonEligibleReason: "This needs a planned or operating business and PAN readiness.",
     sources: [{ label: "Udyam Registration", url: "https://udyamregistration.gov.in/" }],
   }),
   createConnector({
@@ -377,14 +377,14 @@ export const serviceConnectors: readonly ServiceConnector[] = [
     shortTitle: "GST",
     description: "Prepare a turnover and business-activity checklist for GST review.",
     requiredFacts: ["lifeEvent", "businessStage", "businessType", "annualTurnoverBand", "hasPan"],
-    requiredDocuments: ["Synthetic PAN status", "Synthetic business address", "Synthetic turnover summary"],
+    requiredDocuments: ["PAN status", "Business address", "Turnover summary"],
     matches: (profile) =>
       isLifeEvent(profile, "business") &&
       profile.facts.businessStage === "operating" &&
       ["20l_to_40l", "above_40l"].includes(String(profile.facts.annualTurnoverBand)) &&
       profile.facts.hasPan === true,
     nonEligibleReason:
-      "This prototype flags GST readiness only for an operating business in its sample higher-turnover ranges; official thresholds vary.",
+      "RightNow flags GST readiness only for an operating business above this turnover range; official thresholds vary.",
     sources: [
       { label: "GST Portal", url: "https://www.gst.gov.in/" },
       { label: "CBIC GST FAQs", url: "https://cbic-gst.gov.in/faq.html" },
@@ -397,12 +397,12 @@ export const serviceConnectors: readonly ServiceConnector[] = [
     shortTitle: "Business finance",
     description: "Prepare a comparison-ready project and banking checklist for official finance routes.",
     requiredFacts: ["lifeEvent", "businessStage", "businessType", "hasBankAccount"],
-    requiredDocuments: ["Synthetic project outline", "Synthetic cost estimate", "Synthetic bank status"],
+    requiredDocuments: ["Project outline", "Cost estimate", "Bank status"],
     matches: (profile) =>
       isLifeEvent(profile, "business") &&
       ["planning", "operating"].includes(String(profile.facts.businessStage)) &&
       profile.facts.hasBankAccount === true,
-    nonEligibleReason: "This demo requires a planned or operating business and bank readiness.",
+    nonEligibleReason: "This needs a planned or operating business and bank readiness.",
     sources: [
       { label: "PMEGP ePortal", url: "https://www.kviconline.gov.in/pmegpeportal/pmegponlineapp/index.jsp" },
       { label: "MUDRA", url: "https://www.mudra.org.in/" },
@@ -415,7 +415,7 @@ export const serviceConnectors: readonly ServiceConnector[] = [
     shortTitle: "CPGRAMS",
     description: "Structure a public-service grievance and evidence checklist for review.",
     requiredFacts: ["lifeEvent", "grievanceType", "previousAttempt"],
-    requiredDocuments: ["Synthetic timeline", "Synthetic correspondence or receipt"],
+    requiredDocuments: ["Timeline", "Correspondence or receipt"],
     matches: (profile) =>
       isLifeEvent(profile, "grievance") &&
       profile.facts.grievanceType === "public_service" &&
@@ -430,7 +430,7 @@ export const serviceConnectors: readonly ServiceConnector[] = [
     shortTitle: "Consumer helpline",
     description: "Structure a consumer complaint, remedy and evidence checklist.",
     requiredFacts: ["lifeEvent", "grievanceType", "previousAttempt"],
-    requiredDocuments: ["Synthetic purchase record", "Synthetic complaint timeline"],
+    requiredDocuments: ["Purchase record", "Complaint timeline"],
     matches: (profile) =>
       isLifeEvent(profile, "grievance") &&
       profile.facts.grievanceType === "consumer" &&
@@ -455,9 +455,9 @@ export const serviceConnectors: readonly ServiceConnector[] = [
     missionIds: ["moving"],
     title: "Aadhaar address-update preparation",
     shortTitle: "Address update",
-    description: "Prepare a proof-of-address checklist and a simulated request for the new residence.",
+    description: "Prepare a proof-of-address checklist and a request checklist for the new residence.",
     requiredFacts: ["lifeEvent"],
-    requiredDocuments: ["Synthetic proof of new address", "Synthetic registered-mobile status"],
+    requiredDocuments: ["Proof of new address", "Registered-mobile status"],
     matches: (profile) => isLifeEvent(profile, "moving"),
     nonEligibleReason: "Address-update preparation is only used after an address change.",
     sources: [{ label: "UIDAI: Update your Aadhaar", url: "https://uidai.gov.in/en/my-aadhaar" }],
@@ -467,9 +467,9 @@ export const serviceConnectors: readonly ServiceConnector[] = [
     missionIds: ["moving"],
     title: "Voter address-update preparation",
     shortTitle: "Voter address",
-    description: "Prepare a simulated residence-shift request and an address-proof checklist for the electoral roll.",
+    description: "Prepare a residence-shift request and an address-proof checklist for the electoral roll.",
     requiredFacts: ["lifeEvent"],
-    requiredDocuments: ["Synthetic proof of new address", "Synthetic voter-registration status"],
+    requiredDocuments: ["Proof of new address", "Voter-registration status"],
     matches: (profile) => isLifeEvent(profile, "moving"),
     nonEligibleReason: "Voter address preparation is only used after an address change.",
     sources: [{ label: "Election Commission: Form 8", url: "https://voters.eci.gov.in/formspdf/Form_8_English.pdf" }],
@@ -479,9 +479,9 @@ export const serviceConnectors: readonly ServiceConnector[] = [
     missionIds: ["moving"],
     title: "Ration-card portability preparation",
     shortTitle: "Ration portability",
-    description: "Prepare a simulated portability check for food-grain entitlements at the new location, if applicable.",
+    description: "Prepare a portability check for food-grain entitlements at the new location, if applicable.",
     requiredFacts: ["lifeEvent"],
-    requiredDocuments: ["Synthetic ration-card status", "Synthetic household-member summary"],
+    requiredDocuments: ["Ration-card status", "Household-member summary"],
     matches: (profile) => isLifeEvent(profile, "moving"),
     nonEligibleReason: "Ration portability preparation is only used after an interstate move.",
     sources: [{ label: "National Food Security Act: One Nation One Ration Card", url: "https://nfsa.gov.in/" }],
@@ -491,9 +491,9 @@ export const serviceConnectors: readonly ServiceConnector[] = [
     missionIds: ["moving"],
     title: "Vehicle address-update preparation",
     shortTitle: "Vehicle address",
-    description: "Prepare a simulated address-change checklist for a registered vehicle, if one is in the household.",
+    description: "Prepare an address-change checklist for a registered vehicle, if one is in the household.",
     requiredFacts: ["lifeEvent"],
-    requiredDocuments: ["Synthetic registration certificate", "Synthetic proof of new address", "Synthetic insurance status"],
+    requiredDocuments: ["Registration certificate", "Proof of new address", "Insurance status"],
     matches: (profile) => isLifeEvent(profile, "moving"),
     nonEligibleReason: "Vehicle address preparation is only used after an address change.",
     sources: [{ label: "Parivahan Sewa: Change of Address", url: "https://mparivahan.parivahan.gov.in/mstatic/english/rc-info-address-change.html" }],
@@ -713,7 +713,7 @@ export const missionCatalog: readonly MissionDefinition[] = [
     id: "safety",
     title: "Report a crime or get urgent help",
     prompt: "Someone broke into my house",
-    summary: "Show immediate safety actions and prepare a simulated police-report checklist for later review.",
+    summary: "Show immediate safety actions and prepare a police-report checklist for later review.",
     serviceIds: ["police-report-preparation"],
     questions: [],
     examples: {
