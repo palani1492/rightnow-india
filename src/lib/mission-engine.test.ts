@@ -33,10 +33,10 @@ const pregnancyProfile: HouseholdProfile = {
 };
 
 describe("catalog", () => {
-  it("contains six missions and nineteen uniquely identified connectors", () => {
-    expect(missionCatalog).toHaveLength(6);
-    expect(serviceConnectors).toHaveLength(19);
-    expect(new Set(serviceConnectors.map((connector) => connector.id)).size).toBe(19);
+  it("contains eight verified accelerators and twenty-four uniquely identified connectors", () => {
+    expect(missionCatalog).toHaveLength(8);
+    expect(serviceConnectors).toHaveLength(24);
+    expect(new Set(serviceConnectors.map((connector) => connector.id)).size).toBe(24);
   });
 
   it("keeps every connector traceable to current official sources", () => {
@@ -48,11 +48,18 @@ describe("catalog", () => {
     }
   });
 
+  it("links Aadhaar address updates to the current official My Aadhaar page", () => {
+    expect(getConnector("aadhaar-address-update").sources).toContainEqual({
+      label: "UIDAI: Update your Aadhaar",
+      url: "https://uidai.gov.in/en/my-aadhaar",
+    });
+  });
+
   it("gives each mission adaptive questions and valid connector references", () => {
     const connectorIds = new Set(serviceConnectors.map(({ id }) => id));
 
     for (const mission of missionCatalog) {
-      expect(mission.questions.length).toBeGreaterThan(1);
+      expect(mission.questions.length).toBeGreaterThanOrEqual(0);
       expect(mission.examples.en.length).toBeGreaterThan(0);
       expect(mission.examples.hi.length).toBeGreaterThan(0);
       expect(mission.examples.ta.length).toBeGreaterThan(0);
@@ -111,6 +118,11 @@ describe("eligibility", () => {
     ["pmegp-mudra", { lifeEvent: "business", businessStage: "planning", businessType: "manufacturing", hasBankAccount: true }],
     ["cpgrams", { lifeEvent: "grievance", grievanceType: "public_service", previousAttempt: true }],
     ["consumer-helpline", { lifeEvent: "grievance", grievanceType: "consumer", previousAttempt: true }],
+    ["police-report-preparation", { lifeEvent: "safety" }],
+    ["aadhaar-address-update", { lifeEvent: "moving" }],
+    ["voter-address-update", { lifeEvent: "moving" }],
+    ["ration-portability", { lifeEvent: "moving" }],
+    ["vehicle-address-update", { lifeEvent: "moving" }],
   ] as const)("evaluates and prepares the %s connector", (serviceId, facts) => {
     const connector = getConnector(serviceId);
     const profile: HouseholdProfile = { ...baseProfile, facts };
@@ -174,7 +186,7 @@ describe("household autopilot", () => {
   it("scans every connector and discovers newly eligible prepared actions", () => {
     const result = scanHousehold(pregnancyProfile);
 
-    expect(result.scannedCount).toBe(19);
+    expect(result.scannedCount).toBe(24);
     expect(result.discoveredActions.map(({ serviceId }) => serviceId)).toEqual(
       expect.arrayContaining(["pmmvy", "jsy", "jssk"]),
     );

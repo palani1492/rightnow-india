@@ -3,24 +3,16 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
   ArrowUpIcon,
-  BabyIcon,
   BellRingingIcon,
-  BriefcaseIcon,
   BuildingsIcon,
   CheckCircleIcon,
-  GraduationCapIcon,
-  HandCoinsIcon,
   ListChecksIcon,
   MicrophoneIcon,
   PencilSimpleIcon,
-  SparkleIcon,
-  StorefrontIcon,
   UserCircleIcon,
-  WarningCircleIcon,
 } from "@phosphor-icons/react";
-import type { Icon } from "@phosphor-icons/react";
-import { missionCatalog } from "@/lib/catalog";
-import { applyFactUpdate, getNextQuestions, planMission, scanHousehold } from "@/lib/mission-engine";
+import { applyFactUpdate, getNextQuestions, planMission } from "@/lib/mission-engine";
+import type { CasePlan } from "@/lib/agent/schemas";
 import type { FactKey, FactValue, LanguageCode, MissionId, PreparedAction } from "@/lib/types";
 import {
   clearHousehold,
@@ -30,9 +22,10 @@ import {
   type InboxAction,
   type StoredHousehold,
 } from "@/client/storage";
-import { ConsentDialog } from "./consent-dialog";
 import { factLabels, formatFact, HouseholdDialog } from "./household-dialog";
 import { ReviewDialog } from "./review-dialog";
+import { ConsentDialog } from "./consent-dialog";
+import { detectSensitiveInput } from "@/lib/security/input-safety";
 
 type ConversationMessage = { id: string; role: "user" | "assistant"; text: string; note?: string };
 
@@ -41,6 +34,7 @@ type AgentResponse = {
   missionId: MissionId | null;
   facts: Array<{ key: FactKey; value: FactValue }>;
   reply: string;
+  casePlan: CasePlan | null;
   mode: "model" | "fallback";
   fallbackReason?: string;
 };
@@ -48,33 +42,24 @@ type AgentResponse = {
 type MockSubmission = {
   actionId: string;
   reference: string;
-  status: "submitted";
+  status: "simulated";
   timeline: ReadonlyArray<{ label: string; at: string }>;
 };
 
-const missionIcons: Record<MissionId, Icon> = {
-  pregnancy: BabyIcon,
-  college: GraduationCapIcon,
-  work: BriefcaseIcon,
-  "job-loss": HandCoinsIcon,
-  business: StorefrontIcon,
-  grievance: WarningCircleIcon,
-};
-
-const missionLabels: Record<MissionId, string> = {
-  pregnancy: "I am expecting a child",
-  college: "I am starting college",
-  work: "I started earning",
-  "job-loss": "I lost my job",
-  business: "I want to start a business",
-  grievance: "I have a public service problem",
-};
+const examplePrompts = [
+  "My passport expired",
+  "I am moving states",
+  "A certificate has an error",
+  "I lost my job",
+  "My parent needs support",
+  "I want to start a shop",
+] as const;
 
 const copyByLanguage: Record<LanguageCode, { headline: string; tagline: string; placeholder: string }> = {
   en: {
     headline: "Tell us what changed.",
     tagline: "One conversation. Every public service.",
-    placeholder: "For example, I started freelancing from home...",
+    placeholder: "For example, my passport expired and I need to travel...",
   },
   hi: {
     headline: "बताइए, क्या बदला है।",
@@ -100,6 +85,11 @@ function messageId(): string {
   return globalThis.crypto?.randomUUID?.() ?? `${Date.now()}-${Math.random()}`;
 }
 
+function caseActionId(householdId: string): string {
+  const nonce = globalThis.crypto?.randomUUID?.().slice(0, 8) ?? String(Date.now());
+  return `${householdId}-${nonce}:general-case-simulation`;
+}
+
 export function RightNowApp() {
   const [household, setHousehold] = useState<StoredHousehold>(() => createEmptyHousehold());
   const [hydrated, setHydrated] = useState(false);
@@ -107,17 +97,21 @@ export function RightNowApp() {
   const [messages, setMessages] = useState<ConversationMessage[]>([]);
   const [activeMission, setActiveMission] = useState<MissionId | null>(null);
   const [preparedActions, setPreparedActions] = useState<PreparedAction[]>([]);
-  const [unsupported, setUnsupported] = useState(false);
+  const [casePlan, setCasePlan] = useState<CasePlan | null>(null);
+  const [casePlanMode, setCasePlanMode] = useState<"model" | "fallback" | null>(null);
   const [consentOpen, setConsentOpen] = useState(false);
+  const [pendingMessage, setPendingMessage] = useState<string | null>(null);
   const [householdOpen, setHouseholdOpen] = useState(false);
   const [reviewOpen, setReviewOpen] = useState(false);
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
-  const [pendingMessage, setPendingMessage] = useState<string | null>(null);
   const [working, setWorking] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isListening, setIsListening] = useState(false);
   const transcriptEnd = useRef<HTMLDivElement>(null);
+  const casePlanTarget = useRef<HTMLElement>(null);
+  const questionTarget = useRef<HTMLDivElement>(null);
+  const preparedTarget = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     let active = true;
@@ -146,11 +140,13 @@ export function RightNowApp() {
   );
   const languageCopy = copyByLanguage[household.profile.preferredLanguage];
 
+  useEffect(() => {
+    const target = casePlanTarget.current ?? questionTarget.current ?? preparedTarget.current;
+    target?.scrollIntoView({ behavior: "smooth", block: "start" });
+  }, [casePlan, currentQuestion, preparedActions]);
+
   function updateProfile(nextProfile: StoredHousehold["profile"]): void {
-    setHousehold((current) => {
-      const discovered = scanHousehold(nextProfile, current.inbox.map(({ id }) => id)).discoveredActions;
-      return { ...current, profile: nextProfile, inbox: mergeInbox(current.inbox, discovered) };
-    });
+    setHousehold((current) => ({ ...current, profile: nextProfile }));
   }
 
   function prepareMission(missionId: MissionId, profile = household.profile): void {
@@ -158,17 +154,50 @@ export function RightNowApp() {
     if (plan.nextQuestions.length === 0) {
       setPreparedActions(plan.actions);
       setSelectedIds(plan.actions.map(({ id }) => id));
-      setHousehold((current) => ({ ...current, inbox: mergeInbox(current.inbox, plan.actions) }));
       const preparedText = plan.actions.length > 0
-        ? `I prepared ${plan.actions.length} actions for one review. Nothing has been submitted.`
-        : "I do not have enough rule-based evidence to prepare an action. Try editing the household facts.";
+        ? `I found ${plan.actions.length} services and prepared a simulation plan. Nothing has been sent.`
+        : "I do not have enough information to prepare a plan. Try editing the saved details.";
       setMessages((current) => [...current, { id: messageId(), role: "assistant", text: preparedText }]);
     }
   }
 
-  async function interpretMessage(message: string, consent: boolean): Promise<void> {
+  function prepareGeneralCasePlan(
+    plan: CasePlan,
+    mode: "model" | "fallback",
+    profile = household.profile,
+  ): void {
+    const action: PreparedAction = {
+      id: caseActionId(profile.id),
+      serviceId: "general-case-simulation",
+      missionId: "general",
+      title: plan.title,
+      summary: plan.summary,
+      status: "prepared",
+      eligibility: {
+        status: "needs_information",
+        reason: mode === "model"
+          ? "AI-generated planning brief only. RightNow has not determined official eligibility."
+          : "Generic fallback planning brief only. RightNow has not determined official eligibility.",
+        missingFacts: [],
+        evidence: [],
+      },
+      requiredDocuments: plan.steps.map(({ title }) => title),
+      reviewItems: [],
+      sources: [],
+      lastVerified: new Date().toISOString().slice(0, 10),
+      disclaimer: "Independent prototype. This is a generated simulation plan, not an official process or application.",
+    };
+    setPreparedActions([action]);
+    setSelectedIds([action.id]);
+  }
+
+  async function interpretMessage(message: string, aiConsent: boolean): Promise<void> {
     setWorking(true);
     setError(null);
+    setPreparedActions([]);
+    setSelectedIds([]);
+    setCasePlan(null);
+    setCasePlanMode(null);
     setMessages((current) => [...current, { id: messageId(), role: "user", text: message }]);
 
     try {
@@ -178,7 +207,7 @@ export function RightNowApp() {
         body: JSON.stringify({
           message,
           locale: household.profile.preferredLanguage,
-          aiConsent: consent,
+          aiConsent,
         }),
       });
       const payload = await response.json() as AgentResponse & { error?: { message?: string } };
@@ -190,15 +219,23 @@ export function RightNowApp() {
           id: messageId(),
           role: "assistant",
           text: payload.reply,
-          note: payload.mode === "fallback" ? "Private deterministic interpretation" : "Interpreted by Luna, checked by fixed rules",
+          note: payload.mode === "fallback"
+            ? payload.fallbackReason === "consent-declined"
+              ? "Guided mode. No description was sent to an AI provider."
+              : "AI was unavailable, so RightNow used a safe fallback simulation."
+            : "AI-routed simulation. Review before saving any mock record.",
         },
       ]);
 
       if (!payload.missionId) {
-        setUnsupported(true);
+        setActiveMission(null);
+        setCasePlan(payload.casePlan);
+        setCasePlanMode(payload.casePlan ? payload.mode : null);
+        if (payload.casePlan) prepareGeneralCasePlan(payload.casePlan, payload.mode);
         return;
       }
-      setUnsupported(false);
+      setCasePlan(null);
+      setCasePlanMode(null);
       const extracted = Object.fromEntries(payload.facts.map(({ key, value }) => [key, value]));
       const nextProfile = applyFactUpdate(
         { ...household.profile, preferredLanguage: payload.language },
@@ -219,6 +256,12 @@ export function RightNowApp() {
   function requestInterpretation(message: string): void {
     const clean = message.trim();
     if (!hydrated || !clean || working) return;
+    const sensitive = detectSensitiveInput(clean);
+    if (sensitive) {
+      setInput("");
+      setError(`Remove the ${sensitive.kind} value. This prototype never needs identity or account numbers.`);
+      return;
+    }
     setInput("");
     if (household.aiConsent === null) {
       setPendingMessage(clean);
@@ -228,14 +271,12 @@ export function RightNowApp() {
     void interpretMessage(clean, household.aiConsent);
   }
 
-  function chooseConsent(consent: boolean): void {
-    setHousehold((current) => ({ ...current, aiConsent: consent }));
+  function chooseAiMode(aiConsent: boolean): void {
     setConsentOpen(false);
-    if (pendingMessage) {
-      const message = pendingMessage;
-      setPendingMessage(null);
-      void interpretMessage(message, consent);
-    }
+    setHousehold((current) => ({ ...current, aiConsent }));
+    const message = pendingMessage;
+    setPendingMessage(null);
+    if (message) void interpretMessage(message, aiConsent);
   }
 
   function answerQuestion(value: FactValue, label: string): void {
@@ -256,7 +297,6 @@ export function RightNowApp() {
       profile: { ...current.profile, facts: nextFacts, updatedAt: new Date().toISOString() },
     }));
     setPreparedActions([]);
-    setUnsupported(false);
   }
 
   function changeLanguage(preferredLanguage: LanguageCode): void {
@@ -266,10 +306,18 @@ export function RightNowApp() {
     }));
   }
 
+  function changeAiConsent(aiConsent: boolean | null): void {
+    setHousehold((current) => ({ ...current, aiConsent }));
+  }
+
   function clearAll(): void {
     setHousehold(clearHousehold(window.localStorage));
     setMessages([]);
     setPreparedActions([]);
+    setCasePlan(null);
+    setCasePlanMode(null);
+    setConsentOpen(false);
+    setPendingMessage(null);
     setSelectedIds([]);
     setActiveMission(null);
     setHouseholdOpen(false);
@@ -304,17 +352,22 @@ export function RightNowApp() {
       }
 
       const byId = new Map(result.submissions.map((submission) => [submission.actionId, submission]));
+      const approvedActions = preparedActions.filter(({ id }) => selectedIds.includes(id));
       setHousehold((current) => ({
         ...current,
-        inbox: current.inbox.map((item) => {
+        inbox: mergeInbox(current.inbox, approvedActions).map((item) => {
           const submission = byId.get(item.id);
           return submission ? { ...item, ...submission } : item;
         }),
       }));
       setReviewOpen(false);
+      setPreparedActions([]);
+      setSelectedIds([]);
+      setCasePlan(null);
+      setCasePlanMode(null);
       setMessages((current) => [
         ...current,
-        { id: messageId(), role: "assistant", text: `${result.submissions?.length ?? 0} mock applications are now in your civic inbox.` },
+        { id: messageId(), role: "assistant", text: "Your simulated plan is now in your civic inbox. Nothing was sent." },
       ]);
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : "The mock gateway could not finish.");
@@ -355,10 +408,22 @@ export function RightNowApp() {
       <section className="main-stage">
         <header className="brand-row">
           <div className="brand-mark">
-            <span className="brand-symbol"><SparkleIcon aria-hidden="true" size={17} weight="fill" /></span>
+            <span className="brand-symbol"><BuildingsIcon aria-hidden="true" size={18} weight="fill" /></span>
             RightNow India
           </div>
           <div className="utility-actions">
+            <div className="language-switcher" aria-label="Choose language">
+              {(["en", "hi", "ta"] as const).map((language) => (
+                <button
+                  type="button"
+                  key={language}
+                  aria-pressed={household.profile.preferredLanguage === language}
+                  onClick={() => changeLanguage(language)}
+                >
+                  {language === "en" ? "EN" : language === "hi" ? "हिं" : "த"}
+                </button>
+              ))}
+            </div>
             <button className="text-button" type="button" onClick={() => setHouseholdOpen(true)}>What RightNow knows</button>
             <button className="icon-button" type="button" onClick={() => setHouseholdOpen(true)} aria-label="Open household profile">
               <UserCircleIcon aria-hidden="true" size={22} />
@@ -366,12 +431,11 @@ export function RightNowApp() {
           </div>
         </header>
 
-        <div className="hero-copy">
-          <h1>{languageCopy.headline}</h1>
-          <p>{languageCopy.tagline}</p>
-        </div>
-
-        <div className="composer-wrap">
+        <section className="service-finder" aria-labelledby="hero-title">
+          <div className="finder-heading">
+            <h1 id="hero-title">Whatever changed, start here</h1>
+            <p>Describe any life situation. AI routes it into a reviewable simulation, while verified demo connectors add detail when they fit. Nothing is submitted.</p>
+          </div>
           <form className="composer" onSubmit={(event) => { event.preventDefault(); requestInterpretation(input); }}>
             <button
               className="icon-button"
@@ -397,19 +461,40 @@ export function RightNowApp() {
               <ArrowUpIcon aria-hidden="true" size={21} weight="bold" />
             </button>
           </form>
+          <p className="demo-notice">
+            <CheckCircleIcon aria-hidden="true" size={16} weight="fill" />
+            Do not include names, exact addresses, ID or account numbers, OTPs, or personal records.
+            <span className="ai-mode-chip">
+              {household.aiConsent === true ? "AI routing on" : household.aiConsent === false ? "Guided mode" : "AI asks first"}
+            </span>
+          </p>
+        </section>
 
-          <div className="prompt-grid" aria-label="Life mission suggestions">
-            {missionCatalog.map((mission) => {
-              const MissionIcon = missionIcons[mission.id];
-              return (
-                <button className="prompt-chip" type="button" key={mission.id} disabled={!hydrated} onClick={() => requestInterpretation(missionLabels[mission.id])}>
-                  <MissionIcon aria-hidden="true" size={18} weight="duotone" />
-                  {mission.title}
-                </button>
-              );
-            })}
+        <section className="mission-section" aria-labelledby="mission-title">
+          <div className="section-heading">
+            <h2 id="mission-title">Examples, not limits</h2>
+            <p>Try one of these or describe anything else in your own words.</p>
           </div>
-        </div>
+
+          <div className="prompt-grid" aria-label="Example requests">
+            {examplePrompts.map((example) => (
+                <button
+                  className="prompt-chip"
+                  type="button"
+                  key={example}
+                  aria-label={example}
+                  disabled={!hydrated}
+                  onClick={() => requestInterpretation(example)}
+                >
+                  <span className="prompt-copy">
+                    <strong>{example}</strong>
+                    <small>Try this</small>
+                  </span>
+                  <ArrowUpIcon className="prompt-arrow" aria-hidden="true" size={17} weight="bold" />
+                </button>
+              ))}
+          </div>
+        </section>
 
         <section className="workspace" aria-live="polite" aria-label="RightNow conversation">
           {messages.length > 0 ? (
@@ -424,22 +509,40 @@ export function RightNowApp() {
             </div>
           ) : null}
 
-          {working ? <div className="question-panel"><p>Connecting your life change to the right mission...</p></div> : null}
+          {working ? <div className="question-panel"><p>Finding services and next steps that may help...</p></div> : null}
           {error ? <div className="error-callout" role="alert">{error}</div> : null}
 
-          {unsupported ? (
-            <div className="handoff-panel">
-              <strong>This service is outside the six demo missions.</strong>
-              <p>Continue through an official discovery entry point. RightNow will not pretend it can complete an unsupported service.</p>
-              <div className="answer-grid">
-                <a href="https://web.umang.gov.in/landing" target="_blank" rel="noreferrer">Open official UMANG</a>
-                <a href="https://www.myscheme.gov.in/" target="_blank" rel="noreferrer">Explore official myScheme</a>
-              </div>
-            </div>
+          {casePlan ? (
+            <section ref={casePlanTarget} className="question-panel generated-plan" aria-labelledby="case-plan-title">
+              <span className="plan-eyebrow">
+                {casePlanMode === "model" ? "AI-generated simulation" : "Safe fallback simulation"}
+              </span>
+              <h2 id="case-plan-title">{casePlan.title}</h2>
+              <p>{casePlan.summary}</p>
+              <ol>
+                {casePlan.steps.map((step) => <li key={step.title}><strong>{step.title}.</strong> {step.description}</li>)}
+              </ol>
+              <p className="simulation-disclaimer">
+                {casePlanMode === "model" ? "AI-generated" : "Generic fallback"} simulation, not verified official guidance. Review it before saving a mock record. RightNow will not contact a government office, person or service.
+              </p>
+            </section>
+          ) : null}
+
+          {activeMission === "safety" ? (
+            <section className="emergency-panel" aria-labelledby="safety-plan-title">
+              <h2 id="safety-plan-title">Immediate support plan</h2>
+              <p><strong>If anyone may still be in danger, call 112 now.</strong> Move to a safe place. Do not confront anyone or disturb the area.</p>
+              <ol>
+                <li>Use 112 for urgent police, fire or medical support.</li>
+                <li>When safe, note the time, place, people involved and items affected.</li>
+                <li>Keep photos, messages or other evidence only if it is safe to do so.</li>
+              </ol>
+              <p className="simulation-disclaimer">This demo has not contacted 112, police or anyone else.</p>
+            </section>
           ) : null}
 
           {currentQuestion ? (
-            <div className="question-panel">
+            <div ref={questionTarget} className="question-panel">
               <h2>{currentQuestion.prompt}</h2>
               {currentQuestion.help ? <p>{currentQuestion.help}</p> : <p>Choose a synthetic answer for this public demo.</p>}
               <div className="answer-grid">
@@ -459,19 +562,23 @@ export function RightNowApp() {
           ) : null}
 
           {preparedActions.length > 0 ? (
-            <div className="prepared-panel">
-              <h2>{preparedActions.length} actions, one review</h2>
-              <p>RightNow checked fixed demo rules, assembled the required facts and stopped before submission.</p>
+            <div ref={preparedTarget} className="prepared-panel">
+              <h2>
+                {preparedActions.every(({ missionId }) => missionId === "general")
+                  ? "Plan ready to simulate"
+                  : `${preparedActions.length} ${preparedActions.length === 1 ? "service" : "services"} ready to simulate`}
+              </h2>
+              <p>Review what RightNow would prepare. It stops before contacting an official service.</p>
               <div className="prepared-list">
                 {preparedActions.map((action) => (
                   <div className="prepared-row" key={action.id}>
                     <span>{action.title}</span>
-                    <span className="status-badge"><CheckCircleIcon aria-hidden="true" size={13} weight="fill" /> Prepared</span>
+                    <span className="status-badge"><CheckCircleIcon aria-hidden="true" size={13} weight="fill" /> Ready</span>
                   </div>
                 ))}
               </div>
               <button className="primary-button" type="button" onClick={() => setReviewOpen(true)}>
-                <ListChecksIcon aria-hidden="true" size={19} /> Review all actions
+                <ListChecksIcon aria-hidden="true" size={19} /> Review your plan
               </button>
             </div>
           ) : null}
@@ -479,6 +586,11 @@ export function RightNowApp() {
       </section>
 
       <aside className="side-rail" aria-label="Household and civic inbox">
+        <section className="rail-intro">
+          <h2>Your account</h2>
+          <p>Facts you choose to save stay in this browser and can be reused when they help.</p>
+        </section>
+
         <section className="rail-section">
           <div className="rail-title">
             <h2>What RightNow knows</h2>
@@ -503,13 +615,13 @@ export function RightNowApp() {
             <span className="rail-count">{household.inbox.length}</span>
           </div>
           {household.inbox.length === 0 ? (
-            <div className="empty-state">Prepared actions, mock references and future reminders will appear here.</div>
+            <div className="empty-state">Plans you approve will appear here as simulations.</div>
           ) : (
             <div className="inbox-list">
               {household.inbox.slice().reverse().slice(0, 8).map((item) => (
                 <div className="inbox-item" key={item.id}>
                   <strong>{item.title}</strong>
-                  <span>{item.status === "submitted" ? item.reference : "Ready for consolidated review"}</span>
+                  <span>{item.status === "submitted" || item.status === "simulated" ? "Simulation recorded" : "Ready to simulate"}</span>
                 </div>
               ))}
             </div>
@@ -517,20 +629,21 @@ export function RightNowApp() {
         </section>
 
         <section className="rail-section">
-          <div className="rail-title"><h2>Autopilot</h2><BuildingsIcon aria-hidden="true" size={18} /></div>
+          <div className="rail-title"><h2>Service check</h2><BuildingsIcon aria-hidden="true" size={18} /></div>
           <div className="empty-state">
-            <BellRingingIcon aria-hidden="true" size={17} /> Every saved change is scanned against all 19 demo connectors.
+            <BellRingingIcon aria-hidden="true" size={17} /> Each saved change is checked against the services in this demo.
           </div>
         </section>
       </aside>
 
-      <ConsentDialog open={consentOpen} onChoose={chooseConsent} />
       <HouseholdDialog
         open={householdOpen}
         profile={household.profile}
+        aiConsent={household.aiConsent}
         onOpenChange={setHouseholdOpen}
         onRemoveFact={removeFact}
         onLanguageChange={changeLanguage}
+        onAiConsentChange={changeAiConsent}
         onClear={clearAll}
       />
       <ReviewDialog
@@ -543,6 +656,7 @@ export function RightNowApp() {
         onToggle={toggleSelected}
         onSubmit={() => void submitSelected()}
       />
+      <ConsentDialog open={consentOpen} onChoose={chooseAiMode} />
     </main>
   );
 }

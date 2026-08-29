@@ -6,7 +6,10 @@ export type MissionId =
   | "work"
   | "job-loss"
   | "business"
-  | "grievance";
+  | "grievance"
+  | "safety"
+  | "moving"
+  | "general";
 
 export type ServiceId =
   | "pmmvy"
@@ -27,7 +30,13 @@ export type ServiceId =
   | "gst-readiness"
   | "pmegp-mudra"
   | "cpgrams"
-  | "consumer-helpline";
+  | "consumer-helpline"
+  | "police-report-preparation"
+  | "aadhaar-address-update"
+  | "voter-address-update"
+  | "ration-portability"
+  | "vehicle-address-update"
+  | "general-case-simulation";
 
 export type FactKey =
   | "lifeEvent"

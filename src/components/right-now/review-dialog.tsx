@@ -31,13 +31,13 @@ export function ReviewDialog({
         <Dialog.Overlay className="dialog-overlay" />
         <Dialog.Content className="dialog-content">
           <div className="rail-title">
-            <Dialog.Title className="dialog-title">One review for every prepared action</Dialog.Title>
+            <Dialog.Title className="dialog-title">Review your plan</Dialog.Title>
             <Dialog.Close className="icon-button" aria-label="Close review">
               <XIcon aria-hidden="true" size={18} />
             </Dialog.Close>
           </div>
           <Dialog.Description className="dialog-description">
-            Select what to authorize. This creates demo reference numbers only. Nothing is sent to a government service.
+            Select the steps to simulate. Nothing is submitted to any government service or portal.
           </Dialog.Description>
 
           <div className="review-list">
@@ -54,10 +54,28 @@ export function ReviewDialog({
                   <span>
                     <strong>{action.title}</strong>
                     <p>{action.summary}</p>
-                    <p>{action.requiredDocuments.length} document checks. No uploads.</p>
-                    <a href={action.sources[0]?.url} target="_blank" rel="noreferrer">
-                      Verify on {action.sources[0]?.label ?? "official source"}
-                    </a>
+                    <p className="review-reason">{action.eligibility.reason}</p>
+                    {action.requiredDocuments.length > 0 ? (
+                      <ul className="review-checklist" aria-label={`Preparation checklist for ${action.title}`}>
+                        {action.requiredDocuments.map((item) => <li key={item}>{item}</li>)}
+                      </ul>
+                    ) : null}
+                    {action.reviewItems.length > 0 ? (
+                      <dl className="review-facts">
+                        {action.reviewItems.map((item) => (
+                          <div key={item.factKey}><dt>{item.label}</dt><dd>{item.value}</dd></div>
+                        ))}
+                      </dl>
+                    ) : null}
+                    {action.sources.length > 0 ? (
+                      <div className="review-sources" aria-label={`Official sources for ${action.title}`}>
+                        {action.sources.map((source) => (
+                          <a key={source.url} href={source.url} target="_blank" rel="noreferrer">
+                            Verify on {source.label}
+                          </a>
+                        ))}
+                      </div>
+                    ) : null}
                   </span>
                 </div>
               );
@@ -65,8 +83,11 @@ export function ReviewDialog({
           </div>
 
           <div className="notice-box">
-            <FileTextIcon aria-hidden="true" size={18} /> Required documents are guidance only. RightNow never uploads or stores them.
+            <FileTextIcon aria-hidden="true" size={18} /> This is a simulation. RightNow never makes a call, files a report, uploads a document or submits an application.
           </div>
+          <p className="field-help">
+            If you continue, the selected mock plan and reference stay in this browser until you clear the household.
+          </p>
           {error ? <div className="error-callout" role="alert">{error}</div> : null}
 
           <div className="dialog-actions">
@@ -78,7 +99,7 @@ export function ReviewDialog({
               onClick={onSubmit}
             >
               <CheckCircleIcon aria-hidden="true" size={19} weight="fill" />
-              {submitting ? "Creating demo references" : `Authorize ${selectedIds.length} mock actions`}
+              {submitting ? "Creating your simulation" : `Simulate ${selectedIds.length} next ${selectedIds.length === 1 ? "step" : "steps"}`}
             </button>
           </div>
         </Dialog.Content>

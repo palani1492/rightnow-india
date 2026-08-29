@@ -30,7 +30,7 @@ const architecture = [
   {
     eyebrow: "Understanding",
     title: "Intent, not eligibility",
-    text: "Luna can identify a mission and extract permitted facts. A schema gate rejects unknown values.",
+    text: "AI can route any safe description into a simulation. A schema gate keeps model output inside a bounded planning contract.",
   },
   {
     eyebrow: "Rules",
@@ -45,7 +45,7 @@ const architecture = [
   {
     eyebrow: "Demo output",
     title: "Mock gateway and inbox",
-    text: "Synthetic reference numbers, timelines and reminders prove the journey without live submissions.",
+    text: "A clearly marked simulation record in the civic inbox proves the journey without a live submission.",
   },
 ] as const;
 
@@ -54,7 +54,7 @@ const milestones = [
     number: "01",
     title: "Problem framing",
     copy: "The builder defined the central tension: public benefits may be valuable, but people avoid unfamiliar government navigation.",
-    evidence: "Product brief and six citizen missions",
+    evidence: "Open-ended product brief and verified accelerators",
   },
   {
     number: "02",
@@ -65,32 +65,32 @@ const milestones = [
   {
     number: "03",
     title: "Boundary design",
-    copy: "Codex translated that brief into a connector contract where language models interpret requests but never decide eligibility.",
+    copy: "Codex translated that brief into a connector contract where language interpretation never decides eligibility.",
     evidence: "Typed connector interface and rule engine",
   },
   {
     number: "04",
     title: "Test-led implementation",
-    copy: "Expected mission matches, rejected model output, consent boundaries and mock submission states were specified as tests alongside the build.",
+    copy: "Expected mission matches, rejected language output, privacy boundaries and simulated-action states were specified as tests alongside the build.",
     evidence: "Vitest, Testing Library and Playwright suites",
   },
   {
     number: "05",
     title: "Product construction",
-    copy: "Codex assembled the multilingual conversation, household memory, consolidated review, civic inbox and provider adapter.",
+    copy: "Codex assembled the multilingual conversation, household memory, consolidated review, civic inbox and guarded service matcher.",
     evidence: "Next.js application and mocked routes",
   },
   {
     number: "06",
     title: "Debugging and resilience",
-    copy: "Provider timeouts, malformed model output, sensitive-input patterns and unavailable AI are handled as explicit states with a deterministic fallback.",
+    copy: "Unavailable language interpretation, malformed output and sensitive-input patterns are handled as explicit states with a deterministic fallback.",
     evidence: "Boundary tests and user-visible fallback states",
   },
   {
     number: "07",
     title: "Review and release",
-    copy: "Type, coverage, production build, keyboard, mobile, accessibility and security checks were recorded from final command output and review evidence.",
-    evidence: "73 automated tests, 22 browser journeys and independent review",
+    copy: "Type, coverage, production build and desktop/mobile journeys were recorded from final command output.",
+    evidence: "88 automated tests and 26 browser journeys",
   },
 ] as const;
 
@@ -118,7 +118,7 @@ const responsibilities = [
     icon: UserFocus,
     items: [
       "The citizen problem and all-in-one direction",
-      "The six life missions used in the demonstration",
+      "The open-ended citizen experience and example prompts",
       "The trust, privacy and synthetic-data boundaries",
       "Which trade-offs were accepted for the hackathon build",
       "The final product narrative and submission",
@@ -129,7 +129,7 @@ const responsibilities = [
     icon: Code,
     items: [
       "The schema-driven connector architecture",
-      "Frontend, mock backend and configurable AI adapter",
+      "Frontend, simulated backend and configurable service matcher",
       "Unit, integration and end-to-end test suites",
       "Accessibility, code-quality and security review checklists",
       "Architecture notes and a sanitized build record",
@@ -147,7 +147,7 @@ const verification = [
   {
     name: "Unit and integration tests",
     command: "npm run test:coverage",
-    status: "73 passed · 93.58% statements · 100% functions",
+    status: "88 passed · 92.5% statements · 100% functions",
     verified: true,
   },
   {
@@ -157,16 +157,22 @@ const verification = [
     verified: true,
   },
   {
-    name: "Six critical journeys",
+    name: "Critical browser flows",
     command: "npm run test:e2e",
-    status: "22 passed · desktop Chromium + mobile WebKit",
+    status: "26 passed · desktop Chromium + mobile WebKit",
     verified: true,
+  },
+  {
+    name: "Live quality scores",
+    command: "Lighthouse production run",
+    status: "Attach or link the current report before citing scores",
+    verified: false,
   },
   {
     name: "Accessibility and security",
     command: "Manual review + automated checks",
-    status: "No critical or high security findings remain",
-    verified: true,
+    status: "Attach review evidence before claiming a pass",
+    verified: false,
   },
 ] as const;
 
@@ -259,10 +265,10 @@ export default function BuiltWithCodexPage() {
           <div className={styles.guardrails}>
             <ShieldCheck aria-hidden="true" size={26} weight="duotone" />
             <p>
-              <strong>The model has a narrow job.</strong> It detects language,
+              <strong>The language layer has a narrow job.</strong> It detects language,
               maps a message to a known mission and extracts allow-listed facts.
               Connector code alone evaluates eligibility, and the citizen alone
-              approves the mock submission.
+              approves the simulated next steps.
             </p>
           </div>
         </section>
@@ -349,13 +355,12 @@ export default function BuiltWithCodexPage() {
           <div className={styles.runtimePanel}>
             <div>
             <p className={styles.sectionLabel}>Two different roles</p>
-              <h2 id="runtime-title">Codex built it. GPT-5.6 Luna can interpret the conversation.</h2>
+              <h2 id="runtime-title">Codex built it. Runtime AI opens the front door.</h2>
               <p>
                 Codex was used at build time for planning, implementation, tests,
-                debugging and review. At runtime, GPT-5.6 Luna is an optional,
-                consent-gated interpreter behind a configurable provider adapter.
-                If consent or the API is unavailable, deterministic mission prompts
-                keep the prototype functional.
+                debugging and review. At runtime, guarded AI routes any safe
+                description into a simulation or a verified accelerator. If it is
+                unavailable, deterministic routing and a safe fallback keep every request moving.
               </p>
             </div>
             <div className={styles.runtimeBoundaries}>
@@ -367,7 +372,7 @@ export default function BuiltWithCodexPage() {
               <ArrowRight aria-hidden="true" size={20} weight="bold" />
               <div>
                 <span>Run time</span>
-                <strong>GPT-5.6 Luna</strong>
+                <strong>AI router plus schema gate</strong>
                 <p>Language detection, mission mapping and fact extraction only</p>
               </div>
             </div>

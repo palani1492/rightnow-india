@@ -4,32 +4,39 @@ const STORAGE_KEY = "rightnow-india:household:v1";
 
 type MissionJourney = {
   title: string;
+  prompt: string;
   answers: readonly string[];
 };
 
 const missionJourneys: readonly MissionJourney[] = [
   {
     title: "Pregnancy or a new baby",
+    prompt: "I am expecting a child",
     answers: ["Tamil Nadu", "Urban", "First", "Baby was recently born", "Yes"],
   },
   {
     title: "Starting or continuing college",
+    prompt: "I am starting college",
     answers: ["Tamil Nadu", "Yes", "Undergraduate", "Lower range", "Yes"],
   },
   {
     title: "Starting work or earning remotely",
+    prompt: "I started earning",
     answers: ["Tamil Nadu", "Salaried job", "₹3 to ₹8 lakh", "No", "Yes"],
   },
   {
     title: "Losing a job",
+    prompt: "I lost my job",
     answers: ["Tamil Nadu", "Not working", "Both", "Yes"],
   },
   {
     title: "Starting a small business",
+    prompt: "I want to start a shop",
     answers: ["Tamil Nadu", "Planning", "Services", "Under ₹20 lakh", "Yes", "Yes"],
   },
   {
     title: "Fixing a public-service problem",
+    prompt: "I have a public service problem",
     answers: ["Government or public service", "Yes"],
   },
 ] as const;
@@ -41,94 +48,109 @@ async function startFresh(page: Page): Promise<void> {
   await page.context().setExtraHTTPHeaders({
     "x-forwarded-for": `e2e-${Date.now()}-${Math.random()}`,
   });
-  // Use one stable browser origin while Playwright waits on the loopback server.
-  await page.goto("http://localhost:3000/");
+  await page.goto("/");
   await page.evaluate(() => window.localStorage.clear());
   await page.reload();
-  await expect(page.getByRole("heading", { name: "Tell us what changed." })).toBeVisible();
+  await expect(
+    page.getByRole("heading", {
+      name: "Whatever changed, start here",
+    }),
+  ).toBeVisible();
 }
 
 async function startMission(page: Page, journey: MissionJourney): Promise<void> {
-  await page.getByRole("button", { name: journey.title, exact: true }).click();
-
-  const consentDialog = page.getByRole("dialog", {
-    name: "Choose how RightNow understands you",
-  });
-  await expect(consentDialog).toContainText("Never enter identity numbers");
-  await consentDialog.getByRole("button", { name: /Use private demo mode/i }).click();
+  await page.getByLabel("Tell us what changed").fill(journey.prompt);
+  await page.getByRole("button", { name: "Send message" }).click();
+  await page.getByRole("button", { name: "Use guided mode" }).click();
 
   for (const answer of journey.answers) {
     await page.getByRole("button", { name: answer, exact: true }).click();
   }
 
-  await expect(page.getByRole("button", { name: "Review all actions" })).toBeVisible();
-  await expect(page.getByRole("heading", { name: /actions, one review/ })).toBeVisible();
-  await expect(page.getByText("Private deterministic interpretation")).toBeVisible();
+  await expect(page.getByRole("button", { name: "Review your plan" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: /services? ready to simulate/ })).toBeVisible();
 }
 
 for (const journey of missionJourneys) {
-  test(`${journey.title} reaches a consolidated review in private demo mode`, async ({ page }) => {
+  test(`${journey.title} reaches a simulated service plan`, async ({ page }) => {
     await startFresh(page);
     await startMission(page, journey);
   });
 }
 
-test("consolidated approval creates clearly marked mock submissions", async ({ page }) => {
+test("approval records an explicit simulation without a real submission", async ({ page }) => {
   await startFresh(page);
   await startMission(page, missionJourneys[5]);
 
-  await page.getByRole("button", { name: "Review all actions" }).click();
-  const reviewDialog = page.getByRole("dialog", {
-    name: "One review for every prepared action",
-  });
-  await expect(reviewDialog).toContainText("Nothing is sent to a government service");
+  await page.getByRole("button", { name: "Review your plan" }).click();
+  const reviewDialog = page.getByRole("dialog", { name: "Review your plan" });
+  await expect(reviewDialog).toContainText(
+    "Nothing is submitted to any government service or portal",
+  );
   await expect(reviewDialog.getByRole("checkbox")).toBeChecked();
-  await reviewDialog.getByRole("button", { name: /Authorize \d+ mock actions/ }).click();
+  await reviewDialog.getByRole("button", { name: /Simulate \d+ next steps?/ }).click();
 
-  await expect(page.getByText(/mock applications are now in your civic inbox/)).toBeVisible();
-  await expect(page.getByText(/MOCK-RNI-\d{4}-[A-F0-9]{8}/).first()).toBeVisible();
+  await expect(page.getByText("Your simulated plan is now in your civic inbox. Nothing was sent.")).toBeVisible();
+  await expect(page.getByText("Simulation recorded")).toBeVisible();
 });
 
-test("unsupported needs fall back honestly to official entry points", async ({ page }) => {
+test("a robbery produces immediate safety guidance and a simulated police-support plan", async ({ page }) => {
+  await startFresh(page);
+  await page.getByLabel("Tell us what changed").fill("Someone broke into my house");
+  await page.getByRole("button", { name: "Send message" }).click();
+  await page.getByRole("button", { name: "Use guided mode" }).click();
+
+  await expect(page.getByRole("heading", { name: "Immediate support plan" })).toBeVisible();
+  await expect(page.getByText(/If anyone may still be in danger, call 112 now/)).toBeVisible();
+  await expect(page.getByRole("heading", { name: "1 service ready to simulate" })).toBeVisible();
+  await page.getByRole("button", { name: "Review your plan" }).click();
+  await expect(page.getByRole("dialog", { name: "Review your plan" })).toContainText(
+    "Nothing is submitted to any government service or portal",
+  );
+  await expect(page.getByRole("dialog", { name: "Review your plan" })).not.toContainText(
+    "Emergency 112 support preparation",
+  );
+});
+
+test("an interstate move opens a reviewable simulated address-change plan", async ({ page }) => {
+  await startFresh(page);
+  await page.getByLabel("Tell us what changed").fill("I am moving to a different state");
+  await page.getByRole("button", { name: "Send message" }).click();
+  await page.getByRole("button", { name: "Use guided mode" }).click();
+
+  await expect(page.getByRole("heading", { name: "4 services ready to simulate" })).toBeVisible();
+  await expect(page.getByLabel("RightNow conversation").getByText("Aadhaar address-update preparation")).toBeVisible();
+  await expect(page.getByText(/This service is not included in the current demo/)).toHaveCount(0);
+});
+
+test("unclear needs stay in the conversation without exposing prototype-scope language", async ({ page }) => {
   await startFresh(page);
 
   await page.getByLabel("Tell us what changed").fill("I need help renewing my passport");
   await page.getByRole("button", { name: "Send message" }).click();
-  await page
-    .getByRole("dialog", { name: "Choose how RightNow understands you" })
-    .getByRole("button", { name: /Use private demo mode/i })
-    .click();
+  await page.getByRole("button", { name: "Always use AI routing" }).click();
 
-  await expect(page.getByText(/That need is not in this demo yet/)).toBeVisible();
-  await expect(page.getByText(/official UMANG or myScheme/)).toBeVisible();
-  await expect(page.getByRole("link", { name: "Open official UMANG" })).toHaveAttribute(
-    "href",
-    "https://web.umang.gov.in/landing",
-  );
-  await expect(page.getByRole("link", { name: "Explore official myScheme" })).toHaveAttribute(
-    "href",
-    "https://www.myscheme.gov.in/",
-  );
-  await expect(page.getByText("Private deterministic interpretation")).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Your situation plan" })).toBeVisible();
+  await expect(page.getByText(/This service is not included in the current demo/)).toHaveCount(0);
+  await expect(page.getByText(/OpenCode|GPT-5\.6|Luna|AI provider/)).toHaveCount(0);
 });
 
 test("sensitive identity input is rejected before mission interpretation", async ({ page }) => {
   await startFresh(page);
 
+  const sensitiveMessage = "I lost my job and my Aadhaar is 1234 5678 9012";
   await page
     .getByLabel("Tell us what changed")
-    .fill("I lost my job and my Aadhaar is 1234 5678 9012");
+    .fill(sensitiveMessage);
   await page.getByRole("button", { name: "Send message" }).click();
-  await page
-    .getByRole("dialog", { name: "Choose how RightNow understands you" })
-    .getByRole("button", { name: /Use private demo mode/i })
-    .click();
 
   await expect(
     page.getByRole("alert").filter({ hasText: "Remove the aadhaar value" }),
   ).toBeVisible();
-  await expect(page.getByText("Private deterministic interpretation")).toHaveCount(0);
-  await expect(page.getByRole("button", { name: "Review all actions" })).toHaveCount(0);
+  await expect(
+    page.getByLabel("RightNow conversation").getByText(sensitiveMessage, { exact: true }),
+  ).toHaveCount(0);
+  await expect(page.getByRole("button", { name: "Review your plan" })).toHaveCount(0);
 });
 
 test("clear household deletes locally saved facts, inbox and consent", async ({ page }) => {
@@ -160,7 +182,7 @@ test("clear household deletes locally saved facts, inbox and consent", async ({ 
     page.getByText("Facts you share appear here and can be reused across missions."),
   ).toBeVisible();
   await expect(
-    page.getByText("Prepared actions, mock references and future reminders will appear here."),
+    page.getByText("Plans you approve will appear here as simulations."),
   ).toBeVisible();
   await expect
     .poll(async () =>
@@ -191,7 +213,7 @@ test("pregnancy journey remains usable at a narrow mobile viewport", async ({ pa
     () => document.documentElement.scrollWidth - document.documentElement.clientWidth,
   );
   expect(overflow).toBeLessThanOrEqual(1);
-  const reviewButton = page.getByRole("button", { name: "Review all actions" });
+  const reviewButton = page.getByRole("button", { name: "Review your plan" });
   await reviewButton.scrollIntoViewIfNeeded();
   await expect(reviewButton).toBeInViewport();
 });

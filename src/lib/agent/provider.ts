@@ -5,8 +5,9 @@ import {
   type AgentRequest,
   type AgentResponse,
 } from "./schemas";
-import { safeMissionReply } from "./fallback";
+import { casePlanReply, safeMissionReply } from "./fallback";
 import { detectSensitiveInput } from "../security/input-safety";
+import { hasUnsafeGeneratedPlan } from "../security/output-safety";
 
 export type ProviderFailureCode =
   | "timeout"
@@ -32,10 +33,10 @@ type ProviderOptions = Readonly<{
 }>;
 
 const systemInstruction = `You classify a citizen's message for the independent RightNow India synthetic prototype.
-Return only the required JSON schema. You may map one of six mission IDs and extract only explicitly stated, non-sensitive facts from the allowed fact keys.
-Use only these exact domain values when relevant: businessStage planning|operating; workType salaried|freelance|gig; deliveryStatus expecting|recent_birth; studyLevel school|undergraduate|postgraduate; incomeBand low|middle|high; annualIncomeBand under_3l|3l_to_8l|above_8l; jobStatus unemployed|notice_period|working; previousCoverage epfo|esic|both|neither; grievanceType public_service|consumer. Boolean facts must be true or false and childOrder must be 1, 2, or 3.
-Never infer eligibility, invent facts, request identifiers, claim a submission happened, or give legal or financial conclusions.
-If none of the six missions clearly match, set missionId to null. Reply briefly in the detected language.`;
+Return only the required JSON schema. You may map one of eight mission IDs and extract only explicitly stated, non-sensitive facts from the allowed fact keys.
+Use only these exact domain values when relevant: businessStage planning|operating; workType salaried|freelance|gig; deliveryStatus expecting|recent_birth; studyLevel school|undergraduate|postgraduate; incomeBand low|middle|high; annualIncomeBand under_3l|3l_to_8l|above_8l; jobStatus unemployed|notice_period|working; previousCoverage epfo|esic|both|neither; grievanceType public_service|consumer. Boolean facts must be true or false and childOrder must be 1, 2, or 3. Use safety for a robbery, break-in, theft in progress, or urgent need for police support. Use moving for moving, relocating or shifting residence to a different state.
+Never infer eligibility, invent facts, repeat personal identifiers, request identifiers, claim a submission happened, or give medical, legal or financial conclusions.
+For one of the eight verified demo accelerators, casePlan must be null. For every other non-sensitive situation, however unusual or outside a government-service catalogue, set missionId to null, facts to [], and create a casePlan with two to four specific, reviewable preparation steps. Do not refuse merely because the request is outside the fixed catalogue. A casePlan is a simulation brief, not an official procedure: do not name unverified schemes, links, phone numbers, fees, deadlines, doses or eligibility rules; do not repeat names or personal details from the input; and do not claim to contact anyone or complete anything. Prefer neutral preparation verbs such as clarify, list, gather, identify and verify. For medical, legal, financial or immediate-danger situations, make the plan conservative and direct the person to appropriate urgent professional or emergency help when needed. Reply briefly in the detected language.`;
 
 const OPEN_CODE_GO_BASE_URL = "https://opencode.ai/zen/go/v1";
 
@@ -135,6 +136,9 @@ export async function callOpenCodeAgent(
 
     const validated = modelInterpretationSchema.safeParse(parsed);
     if (!validated.success) throw new AgentProviderError("invalid-output");
+    if (validated.data.casePlan && hasUnsafeGeneratedPlan(validated.data.casePlan)) {
+      throw new AgentProviderError("invalid-output");
+    }
     if (
       validated.data.facts.some(
         ({ value }) => typeof value === "string" && detectSensitiveInput(value),
@@ -151,10 +155,16 @@ export async function callOpenCodeAgent(
         ]
       : [];
 
+    const reply = validated.data.missionId
+      ? safeMissionReply(validated.data.missionId, validated.data.language)
+      : validated.data.casePlan
+        ? casePlanReply(validated.data.language)
+        : safeMissionReply(null, validated.data.language);
+
     return agentResponseSchema.parse({
       ...validated.data,
       facts,
-      reply: safeMissionReply(validated.data.missionId, validated.data.language),
+      reply,
       mode: "model",
     });
   } catch (error) {

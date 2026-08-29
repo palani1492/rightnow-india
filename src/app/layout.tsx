@@ -4,9 +4,9 @@ import { ShieldCheckIcon } from "@phosphor-icons/react/dist/ssr";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "RightNow India | One conversation. Every public service.",
+  title: "RightNow India | Whatever changed, start here",
   description:
-    "An independent prototype that prepares public-service actions around life changes using synthetic data.",
+    "An independent AI-routed prototype that turns any life situation into a reviewable simulation using synthetic data.",
 };
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
@@ -15,7 +15,7 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
       <body>
         <div className="prototype-bar">
           <ShieldCheckIcon aria-hidden="true" size={15} weight="fill" />
-          <span>Independent prototype. Synthetic data only. No government systems are connected.</span>
+          <span>Independent prototype. Synthetic data. No government connections.</span>
           <Link href="/built-with-codex">Built with Codex</Link>
         </div>
         {children}
@@ -23,4 +23,3 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
     </html>
   );
 }
-

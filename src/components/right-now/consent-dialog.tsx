@@ -1,7 +1,7 @@
 "use client";
 
 import * as Dialog from "@radix-ui/react-dialog";
-import { BrainIcon, LockKeyIcon } from "@phosphor-icons/react";
+import { CheckCircleIcon, LockKeyIcon } from "@phosphor-icons/react";
 
 interface ConsentDialogProps {
   open: boolean;
@@ -14,31 +14,32 @@ export function ConsentDialog({ open, onChoose }: ConsentDialogProps) {
       <Dialog.Portal>
         <Dialog.Overlay className="dialog-overlay" />
         <Dialog.Content className="dialog-content" aria-describedby="ai-consent-description">
-          <Dialog.Title className="dialog-title">Choose how RightNow understands you</Dialog.Title>
+          <Dialog.Title className="dialog-title">Choose how RightNow routes descriptions</Dialog.Title>
           <Dialog.Description id="ai-consent-description" className="dialog-description">
-            This public demo only needs a short description of what changed. Never enter identity numbers,
-            account details, OTPs or personal documents.
+            Your description will be sent to OpenCode Go to route the request and build
+            a simulated plan. This choice is saved in this browser for future descriptions and can be
+            changed in “What RightNow knows.” RightNow requests no provider storage. Provider policies may still apply.
           </Dialog.Description>
 
           <div className="notice-box">
-            With AI interpretation, your minimum message is sent to GPT-5.6 Luna through OpenCode Go.
-            OpenCode says inputs are not used for training, but abuse-monitoring data may be kept for up to
-            30 days.
+            Never enter names, addresses, medical details, identity numbers, account details, OTPs or
+            personal documents. Pattern blocking reduces risk but cannot catch everything. You can use
+            guided mode instead and change this setting at any time.
           </div>
 
           <div className="review-list">
-            <button className="review-item" type="button" onClick={() => onChoose(true)}>
-              <BrainIcon aria-hidden="true" size={24} weight="duotone" />
+            <button aria-label="Always use AI routing" className="review-item" type="button" onClick={() => onChoose(true)}>
+              <CheckCircleIcon aria-hidden="true" size={24} weight="duotone" />
               <span>
-                <strong>Use AI interpretation</strong>
-                <p>Better multilingual understanding. Eligibility still comes only from deterministic rules.</p>
+                <strong>Always use AI routing</strong>
+                <p>Send future safe descriptions to OpenCode Go automatically on this browser.</p>
               </span>
             </button>
-            <button className="review-item" type="button" onClick={() => onChoose(false)}>
+            <button aria-label="Use guided mode" className="review-item" type="button" onClick={() => onChoose(false)}>
               <LockKeyIcon aria-hidden="true" size={24} weight="duotone" />
               <span>
-                <strong>Use private demo mode</strong>
-                <p>Use the six guided missions without sending your message to an AI provider.</p>
+                <strong>Use guided mode</strong>
+                <p>Keep the description inside this app and use deterministic routing.</p>
               </span>
             </button>
           </div>
@@ -47,4 +48,3 @@ export function ConsentDialog({ open, onChoose }: ConsentDialogProps) {
     </Dialog.Root>
   );
 }
-

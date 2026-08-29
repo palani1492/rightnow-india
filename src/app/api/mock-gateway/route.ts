@@ -91,11 +91,11 @@ export async function POST(request: Request): Promise<Response> {
       submissions: parsed.data.actionIds.map((actionId, index) => ({
         actionId,
         reference: mockReference(),
-        status: "submitted" as const,
+        status: "simulated" as const,
         timeline: [
           { label: "Reviewed together", at: new Date(now).toISOString() },
           {
-            label: "Mock submission created",
+            label: "Simulation record created",
             at: new Date(now + (index + 1) * 1_000).toISOString(),
           },
           {

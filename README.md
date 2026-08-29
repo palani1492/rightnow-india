@@ -1,8 +1,8 @@
 # RightNow India
 
-RightNow India is an independent prototype for discovering and preparing public-service actions around life changes. A citizen describes what changed, answers a few non-sensitive questions, reviews every prepared action together, and receives clearly marked mock references in one civic inbox.
+RightNow India is an independent prototype for turning any life situation into a reviewable action simulation. A citizen describes what changed, AI routes the request, verified demo connectors add detail when they fit, and approved mock records appear in one civic inbox.
 
-The demo includes six missions and nineteen deterministic connectors. It never calls a government system, verifies identity, uploads documents, processes OTPs or payments, or submits a real application.
+The interaction is open-ended rather than limited to a journey catalogue. Twenty-four deterministic connectors provide deeper guided flows for selected public-service situations. Every other safe request receives an AI-generated simulation plan, with a generic fallback if AI is unavailable. The product never calls a government system, verifies identity, uploads documents, processes OTPs or payments, or submits a real application.
 
 ## Run locally
 
@@ -12,7 +12,7 @@ cp .env.example .env.local
 npm run dev
 ```
 
-The app works without an AI key through its English, Hindi and Tamil deterministic matcher. `AI_API_KEY` is optional and should remain unset for the first public demo deployment. To enable model-backed interpretation later, first configure durable distributed rate limiting with Vercel Firewall, Vercel KV, Upstash or an equivalent service, then add the server-only OpenCode Go variables. Never expose the key through a `NEXT_PUBLIC_` variable.
+The app remains usable without an AI key through its English, Hindi and Tamil deterministic matcher plus a safe generic plan. Configure `AI_API_KEY` for specific open-ended routing. Before a public AI-enabled deployment, configure durable distributed rate limiting with Vercel Firewall, Vercel KV, Upstash or an equivalent service. Never expose the key through a `NEXT_PUBLIC_` variable.
 
 Production also requires a random `MOCK_GATEWAY_SECRET` with at least 32 characters. It signs short-lived approval tokens for mock actions only.
 
@@ -36,13 +36,13 @@ npm run test:e2e
 
 ## Deployment
 
-Deploy the repository as a Next.js project on Vercel. Deterministic demo mode needs only the mock-gateway secret:
+Deploy the repository as a Next.js project on Vercel. Mock simulation needs the gateway secret:
 
 ```env
 MOCK_GATEWAY_SECRET=<random 32+ character secret>
 ```
 
-The module-local request limiter is defense-in-depth only and resets across Vercel instances. Before enabling runtime AI, add a durable edge or shared-store rate limit and then configure these optional server-only variables:
+The module-local request limiter is defense-in-depth only and resets across Vercel instances. For open-ended AI routing, add a durable edge or shared-store rate limit and configure these server-only variables:
 
 ```env
 AI_PROVIDER=opencode-go

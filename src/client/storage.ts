@@ -2,7 +2,7 @@ import { z } from "zod";
 import type { HouseholdProfile, PreparedAction } from "@/lib/types";
 
 export interface InboxAction extends Omit<PreparedAction, "status"> {
-  status: "prepared" | "submitted" | "completed";
+  status: "prepared" | "submitted" | "simulated" | "completed";
   reference?: string;
   timeline?: ReadonlyArray<{ label: string; at: string }>;
 }
@@ -46,6 +46,9 @@ const missionIdSchema = z.enum([
   "job-loss",
   "business",
   "grievance",
+  "safety",
+  "moving",
+  "general",
 ]);
 
 const serviceIdSchema = z.enum([
@@ -68,6 +71,12 @@ const serviceIdSchema = z.enum([
   "pmegp-mudra",
   "cpgrams",
   "consumer-helpline",
+  "police-report-preparation",
+  "aadhaar-address-update",
+  "voter-address-update",
+  "ration-portability",
+  "vehicle-address-update",
+  "general-case-simulation",
 ]);
 
 const factValueSchema = z.union([
@@ -84,7 +93,7 @@ const inboxActionSchema = z
     missionId: missionIdSchema,
     title: z.string().min(1).max(200),
     summary: z.string().min(1).max(1_000),
-    status: z.enum(["prepared", "submitted", "completed"]),
+    status: z.enum(["prepared", "submitted", "simulated", "completed"]),
     eligibility: z
       .object({
         status: z.enum(["eligible", "needs_information", "not_eligible"]),

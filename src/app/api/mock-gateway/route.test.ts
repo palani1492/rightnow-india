@@ -42,7 +42,7 @@ describe("POST /api/mock-gateway", () => {
     expect(body.submissions).toHaveLength(2);
     expect(body.submissions[0]).toMatchObject({
       actionId: "household-demo:pmmvy",
-      status: "submitted",
+      status: "simulated",
     });
     expect(body.submissions[0].reference).toMatch(/^MOCK-RNI-/);
   });

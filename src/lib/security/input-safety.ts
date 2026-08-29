@@ -4,12 +4,37 @@ export type SensitiveInputKind =
   | "otp"
   | "bank-account"
   | "phone"
-  | "email";
+  | "email"
+  | "passport"
+  | "voter-id"
+  | "driving-licence"
+  | "uan"
+  | "esic";
 
 const rules: readonly Readonly<{
   kind: SensitiveInputKind;
   pattern: RegExp;
 }>[] = [
+  {
+    kind: "passport",
+    pattern: /(?:passport(?: number| no\.?)?|पासपोर्ट|கடவுச்சீட்டு)\D{0,16}[A-Z][0-9]{7}\b/iu,
+  },
+  {
+    kind: "voter-id",
+    pattern: /(?:voter(?: id)?|epic|मतदाता|வாக்காளர்)\D{0,16}[A-Z]{3}[0-9]{7}\b/iu,
+  },
+  {
+    kind: "driving-licence",
+    pattern: /(?:driving licen[cs]e|driver'?s licen[cs]e|\bdl\b|ड्राइविंग लाइसेंस|ஓட்டுநர் உரிமம்)\D{0,16}[A-Z]{2}[ -]?[0-9]{2}[ -]?[0-9]{4}[ -]?[0-9]{7}\b/iu,
+  },
+  {
+    kind: "uan",
+    pattern: /(?:\buan\b|universal account number)\D{0,16}[0-9]{12}\b/iu,
+  },
+  {
+    kind: "esic",
+    pattern: /(?:\besic\b|insurance number)\D{0,16}[0-9]{10,17}\b/iu,
+  },
   {
     kind: "bank-account",
     pattern: /(?:account|a\/c|खाता|கணக்கு)\D{0,16}\d{9,18}\b/iu,

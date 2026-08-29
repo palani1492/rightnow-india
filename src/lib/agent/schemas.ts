@@ -9,6 +9,8 @@ export const missionIdSchema = z.enum([
   "job-loss",
   "business",
   "grievance",
+  "safety",
+  "moving",
 ]);
 
 export const factKeySchema = z.enum([
@@ -91,7 +93,27 @@ const missionFactKeys: Readonly<
   "job-loss": ["lifeEvent", "state", "jobStatus", "previousCoverage", "hasUan"],
   business: ["lifeEvent", "state", "businessStage", "businessType", "annualTurnoverBand", "hasPan", "hasBankAccount"],
   grievance: ["lifeEvent", "grievanceType", "previousAttempt"],
+  safety: ["lifeEvent"],
+  moving: ["lifeEvent"],
 };
+
+export const casePlanSchema = z
+  .object({
+    title: z.string().trim().min(3).max(100),
+    summary: z.string().trim().min(8).max(280),
+    steps: z
+      .array(
+        z
+          .object({
+            title: z.string().trim().min(3).max(100),
+            description: z.string().trim().min(8).max(220),
+          })
+          .strict(),
+      )
+      .min(2)
+      .max(4),
+  })
+  .strict();
 
 export const modelInterpretationSchema = z
   .object({
@@ -100,9 +122,10 @@ export const modelInterpretationSchema = z
     confidence: z.number().min(0).max(1),
     facts: z.array(extractedFactSchema).max(8),
     reply: z.string().trim().min(1).max(320),
+    casePlan: casePlanSchema.nullable(),
   })
   .strict()
-  .superRefine(({ missionId, facts }, context) => {
+  .superRefine(({ missionId, facts, casePlan }, context) => {
     const keys = facts.map(({ key }) => key);
     if (new Set(keys).size !== keys.length) {
       context.addIssue({ code: "custom", message: "Duplicate fact keys", path: ["facts"] });
@@ -110,6 +133,12 @@ export const modelInterpretationSchema = z
     if (!missionId && facts.length > 0) {
       context.addIssue({ code: "custom", message: "Unsupported missions cannot extract facts", path: ["facts"] });
       return;
+    }
+    if (!missionId && !casePlan) {
+      context.addIssue({ code: "custom", message: "Open-ended requests require a case plan", path: ["casePlan"] });
+    }
+    if (missionId && casePlan) {
+      context.addIssue({ code: "custom", message: "Fixed missions cannot include a general case plan", path: ["casePlan"] });
     }
     if (missionId) {
       const allowed = new Set(missionFactKeys[missionId]);
@@ -144,11 +173,12 @@ export type AgentRequest = z.infer<typeof agentRequestSchema>;
 export type AgentResponse = z.infer<typeof agentResponseSchema>;
 export type Language = z.infer<typeof languageSchema>;
 export type MissionId = z.infer<typeof missionIdSchema>;
+export type CasePlan = z.infer<typeof casePlanSchema>;
 
 export const modelOutputJsonSchema = {
   type: "object",
   additionalProperties: false,
-  required: ["language", "missionId", "confidence", "facts", "reply"],
+  required: ["language", "missionId", "confidence", "facts", "reply", "casePlan"],
   properties: {
     language: { type: "string", enum: languageSchema.options },
     missionId: {
@@ -178,5 +208,33 @@ export const modelOutputJsonSchema = {
       },
     },
     reply: { type: "string", minLength: 1, maxLength: 320 },
+    casePlan: {
+      anyOf: [
+        { type: "null" },
+        {
+          type: "object",
+          additionalProperties: false,
+          required: ["title", "summary", "steps"],
+          properties: {
+            title: { type: "string", minLength: 3, maxLength: 100 },
+            summary: { type: "string", minLength: 8, maxLength: 280 },
+            steps: {
+              type: "array",
+              minItems: 2,
+              maxItems: 4,
+              items: {
+                type: "object",
+                additionalProperties: false,
+                required: ["title", "description"],
+                properties: {
+                  title: { type: "string", minLength: 3, maxLength: 100 },
+                  description: { type: "string", minLength: 8, maxLength: 220 },
+                },
+              },
+            },
+          },
+        },
+      ],
+    },
   },
 } as const;

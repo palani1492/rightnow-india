@@ -11,6 +11,8 @@ describe("deterministicInterpretation", () => {
     ["मुझे सरकारी सेवा की शिकायत करनी है", "grievance", "hi"],
     ["I started freelancing from home", "work", "en"],
     ["I started earning", "work", "en"],
+    ["Someone broke into my house", "safety", "en"],
+    ["I am moving to a different state", "moving", "en"],
   ])("maps a multilingual message", (message, missionId, language) => {
     expect(deterministicInterpretation(message)).toMatchObject({
       missionId,
@@ -19,10 +21,22 @@ describe("deterministicInterpretation", () => {
     });
   });
 
-  it("uses an honest unsupported response", () => {
+  it("builds a safe generic simulation when no accelerator matches", () => {
     const result = deterministicInterpretation("Help me renew a fishing permit");
 
     expect(result.missionId).toBeNull();
-    expect(result.reply).toContain("not in this demo yet");
+    expect(result.reply).toContain("reviewable simulation plan");
+    expect(result.casePlan?.steps).toHaveLength(3);
+    expect(result.reply).not.toContain("demo");
+  });
+
+  it("does not mistake a move between cities for an interstate move", () => {
+    const result = deterministicInterpretation(
+      "I moved from Chennai to Coimbatore last week",
+    );
+
+    expect(result.missionId).toBeNull();
+    expect(result.casePlan?.title).toBe("Your situation plan");
+    expect(result.reply).not.toContain("interstate");
   });
 });

@@ -20,6 +20,12 @@ export const supportedServiceIds = [
   "pmegp-mudra",
   "cpgrams",
   "consumer-helpline",
+  "police-report-preparation",
+  "aadhaar-address-update",
+  "voter-address-update",
+  "ration-portability",
+  "vehicle-address-update",
+  "general-case-simulation",
 ] as const;
 
 const serviceSet = new Set<string>(supportedServiceIds);

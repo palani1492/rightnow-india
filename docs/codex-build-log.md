@@ -22,14 +22,14 @@ Codex helped turn that problem into five product decisions:
 
 | Stage | Codex contribution | Builder decision | Evidence |
 | --- | --- | --- | --- |
-| Problem framing | Compared a narrow service redesign with an all-in-one civic assistant | Choose an independent, UMANG-like mission model rather than a transport or single-form product | Product scope and six missions |
+| Problem framing | Compared a narrow service redesign with an open-ended civic assistant | Choose an independent AI-routed simulation model rather than a transport, single-form, or fixed-catalogue product | Open conversational entry plus verified accelerators |
 | Architecture | Separated language interpretation, eligibility rules, preparation, approval, and mock submission | The model may extract intent and facts but may not decide eligibility | `docs/architecture.md` and connector contract |
 | Risk boundary | Identified identity, payment, OTP, sensitive-data, and endorsement risks | Use synthetic data and no live government APIs | Persistent disclosure and mock gateway |
-| Test design | Defined unit, integration, multilingual, failure, and end-to-end scenarios before implementation | Prioritize six complete journeys over a larger shallow catalogue | Test files and verification report |
+| Test design | Defined unit, integration, multilingual, failure, arbitrary-request, and end-to-end scenarios before implementation | Test both open-ended routing and deeper verified accelerators | Test files and verification report |
 | Implementation | Generated the schema-driven engine, provider adapter, frontend, local profile, review, and inbox | Keep the experience conversational and mobile-first | Source tree and running prototype |
 | Source review | Collected official entry points for demonstrated services | Link users to official sources and avoid claiming legal certainty | Source table below |
 | Accessibility | Reviewed keyboard, focus, status, contrast, reduced motion, and fallback behavior | Text must remain fully usable without voice or AI | Accessibility checklist |
-| Security | Checked for client-side secrets, unvalidated model output, live submissions, and sensitive identifiers | Server-only key, schema validation, minimum facts, explicit consent | Environment example, API boundaries, security review |
+| Security | Checked for client-side secrets, unsafe model output, live submissions, and sensitive identifiers | Server-only key, schema and semantic output validation, common identifier blocking, explicit persistent consent | Environment example, API boundaries, security review |
 | Delivery | Prepared submission copy and a two-minute walkthrough | Show citizen value in minute one and Codex evidence in minute two | `docs/submission-summary.md` and `docs/demo-script.md` |
 
 ## Selected sanitized prompt-to-result examples
@@ -38,10 +38,10 @@ These are paraphrased public examples, not verbatim private conversation.
 
 | Sanitized prompt | Codex result | Builder review |
 | --- | --- | --- |
-| "Design one reusable contract for services across six life missions." | A connector interface with required facts, deterministic evaluation, preparation, official sources, and verification dates | Accepted because new services can be added without changing the conversation shell |
+| "Design one reusable contract for verified public-service accelerators inside an open-ended conversation." | A connector interface with required facts, deterministic evaluation, preparation, official sources, and verification dates | Accepted because new verified accelerators can be added without limiting free-text planning |
 | "Test pregnancy outcomes before implementing the rules." | Cases for missing facts, relevant outcomes, not-relevant outcomes, and consistent preparation | Accepted with synthetic fixtures only |
 | "Make model output unable to create eligibility decisions." | A strict allowlist for mission IDs and fact keys, with eligibility excluded from the model schema | Accepted as a core safety boundary |
-| "Keep the demo useful when AI is unavailable or declined." | English, Hindi, and Tamil deterministic intent matching plus guided mission prompts | Accepted as both a privacy option and resilience feature |
+| "Keep every safe request useful when AI is unavailable or declined." | English, Hindi, and Tamil deterministic routing plus a generic reviewable fallback simulation | Accepted as both a privacy option and resilience feature |
 | "Turn several prepared services into one understandable decision." | A consolidated review with per-action reasons, document checklists, and a single mock approval | Accepted with no automatic submission |
 | "Show how Codex was used without exposing private work." | A public architecture page, sanitized timeline, prompt-to-result table, test evidence, and responsibility split | Accepted with private excerpts and secrets excluded |
 
@@ -50,7 +50,7 @@ These are paraphrased public examples, not verbatim private conversation.
 | Codex produced | Builder decided |
 | --- | --- |
 | Product alternatives, risk analysis, and implementation breakdown | The final citizen problem, name, scope, and success criteria |
-| Connector types, deterministic evaluation structure, and household autopilot logic | Which six missions were important enough for the demo |
+| Connector types, deterministic evaluation structure, and household service-check logic | Which situations deserved deeper verified accelerators |
 | Frontend components, API routes, mocked gateway, and tests | The final tone, interaction order, and what appears in the two-minute video |
 | Multilingual fallback and provider-adapter implementation | Whether AI processing is enabled in the deployment |
 | Accessibility, code-quality, and security review findings | Which tradeoffs to accept under the hackathon deadline |
@@ -118,26 +118,25 @@ The service rules in the prototype are simplified demonstration logic, not legal
 
 | Check | Command or method | Result |
 | --- | --- | --- |
-| Unit and integration tests | `npm run test:coverage` | **PASS: 73 tests across 10 files** |
-| Coverage | `npm run test:coverage` | **PASS: 93.58% statements, 88.71% branches, 100% functions, 94.95% lines** |
+| Unit and integration tests | `npm run test:coverage` | **PASS: 106 tests across 11 files** |
+| Coverage | `npm run test:coverage` | **PASS: 91.06% statements, 86.63% branches, 100% functions, 92.72% lines** |
 | Production build | `npm run build` | **PASS: Next.js production bundle compiled and all routes generated** |
 | Type checking | `npm run typecheck` | **PASS: no TypeScript errors** |
 | Lint | `npm run lint` | **PASS: no ESLint errors or warnings** |
-| End-to-end journeys | `npm run test:e2e` | **PASS: 22 checks on Chromium desktop and iPhone 13 WebKit** |
+| End-to-end journeys | `npm run test:e2e` | **PASS: 26 checks on Chromium desktop and mobile WebKit** |
 | English, Hindi, Tamil parity | Automated deterministic fixtures | **PASS: pregnancy/work in English, job loss/grievance in Hindi, and college in Tamil map to their expected missions** |
 | Keyboard and screen-reader labels | Manual browser and semantic locator review | **PASS: labelled controls, dialog names, live status and keyboard-reachable actions verified** |
 | Mobile and desktop layouts | Browser matrix and Playwright | **PASS: desktop Chromium, iPhone 13 WebKit and 390 × 844 no-overflow check** |
-| Dark mode and reduced motion | Manual browser review | **PASS: both media-query states retain readable content and usable controls** |
-| Lighthouse accessibility | Lighthouse production run | **PENDING: record score and URL** |
-| Lighthouse performance | Lighthouse production run | **PENDING: record score and URL** |
-| Dependency audit | `npm audit --omit=dev` | **PASS: zero production vulnerabilities** |
-| Security review | Reviewer threat-model pass | **PASS for deterministic deployment: no critical or high findings remain** |
+| Reduced motion | CSS media query plus browser review | **PASS: motion is removed for users who request it** |
+| Lighthouse | Production report | **NOT CLAIMED: attach a current report before citing any score** |
+| Dependency audit | `npm audit --omit=dev` | **PASS: zero production vulnerabilities reported** |
+| Security review | Reviewer threat-model pass | **PASS WITH DEPLOYMENT CONDITION: semantic output and identifier controls verified; public AI traffic still requires a durable shared rate limiter** |
 | Secret scan | Repository and client-bundle review | **PASS: no production credentials or sensitive records found; test-only placeholders are isolated to tests** |
-| Public smoke test | Deployed URL, AI on and deterministic fallback | **PENDING: record timestamp and result** |
+| Public smoke test | [rightnow-india.vercel.app](https://rightnow-india.vercel.app) | **NOT RERUN: local changes are not deployed by this task** |
 
 ## Final verification checklist
 
-- [x] Six complete mission journeys are usable.
+- [x] Arbitrary safe descriptions produce a reviewable model or fallback simulation.
 - [x] All demonstrated connectors have deterministic outcomes and source links.
 - [x] AI output cannot provide eligibility decisions.
 - [x] The experience works with AI disabled.
@@ -146,5 +145,5 @@ The service rules in the prototype are simplified demonstration logic, not legal
 - [x] Household data can be cleared from the browser.
 - [x] No real identifiers, documents, OTPs, payments, or government writes are present.
 - [x] No API key is present in source, tests, logs, screenshots, or the client bundle.
-- [ ] Coverage and Lighthouse results are copied from final runs, not estimated. Coverage is final; Lighthouse awaits the deployed URL.
+- [x] Coverage results are copied from final runs; Lighthouse is not claimed without a current report.
 - [x] The public page distinguishes Codex build-time work from GPT-5.6 Luna runtime interpretation.
